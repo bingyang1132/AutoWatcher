@@ -76,6 +76,28 @@ SolverWatcherAdapter
 
 其余 gameplay mod 暂存到 `mods_staged_by_claude/`，测完可以移回去。
 
+## 验收结果（2026-09-04，6/6 通过）
+
+对 `游戏 v0.111.0 + 观者 0.9.25 + CombatSolver 0.29.0 + 适配 0.1.0` 实测：
+
+| 用例 | 判别依据 | 结果 |
+|---|---|---|
+| `WATCHER-ERUPTION-WRATH` | 爆发是首个动作，未镜像项 0 | 通过 |
+| `WATCHER-VIGILANCE-BLOCK` | 首回合格挡峰值 ≥ 8 | 通过 |
+| `WATCHER-CALM-EXIT-ENERGY` | 固定 4 能量下首回合 3 个动作（没有退出平静的 2 点则任何顺序都只有 2 个） | 通过 |
+| `WATCHER-MIRACLE-ENERGY` | 首回合 3 个动作（没有奇迹的 1 点则第二张爆发付不起） | 通过 |
+| `WATCHER-WRATH-DOUBLE-DAMAGE` | 单敌人 21 血第一回合击杀（9 + 6×2；没有翻倍只有 15） | 通过 |
+| `WATCHER-STANCE-REGRESSION-LOCK` | 100 血投影三回合结束，终局敌方总生命 0 | 通过 |
+
+前五条都是算术判别：镜像算错，数值就对不上。第六条是实测出来的回归锁。
+六条都带 `-ExpectedInitialUnmirroredCount 0`，所以**求解器在观者初始牌组上不报告任何未镜像
+效果**——验收标准的第二条已经成立。
+
+重跑：
+
+```bash
+pwsh -NoProfile -File tools/run-watcher-matrix.ps1
+```
 ## 强度验收标准
 
 **不要用胜率或手感做验收。** 姿态被冻结时求解器会低估自己在愤怒姿态下的伤害，于是打得保守，
