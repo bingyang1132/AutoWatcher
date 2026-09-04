@@ -135,7 +135,6 @@ internal static partial class WatcherCardMirrors
     {
         V.Attack(context, VarInt(card, "MagicNumber"));
         S.EnterWrath(context);
-        V.Unmirrored(context, $"{card.Id.Entry} 打出后会把自己随机洗回抽牌堆");
     }
 
     private static void ThirdEye(WatcherThirdEye card, CardOnPlayMirrorContext context)
