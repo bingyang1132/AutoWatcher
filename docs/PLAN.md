@@ -44,21 +44,30 @@
 
 ## 待做
 
-**第 2 块：剩下四个 Harmony 路由的回合流程钩子。**
-观者把 `BeforeHandDraw`、`AfterSideTurnStart`、`AfterFlush`、`AfterCardRetained` 挂在原版 hook
-广播方法的 Harmony postfix 上，实现方法叫 `XxxCompat`。求解器用自己的 mirror 替掉了整个 hook
-分发、从不调那个被打补丁的方法，所以这些**既不生效也不记风险**。涉及的能力：预知的回合初预视、
-观者状态的回合初重置、预测移动、深思沉眠，以及三张牌被保留时的数值增长
-（`WATCHER_PERSEVERANCE` 的格挡、`WATCHER_SANDS_OF_TIME` 的费用、`WATCHER_WINDMILL_STRIKE`
-的伤害）。第五个 `AfterPowerAmountChanged` 已经在动词层里覆盖了。
+**第 2 块（大部分已做）。** 三条 Harmony 补丁已覆盖玩家回合结束和回合开始。剩下的都是走
+Harmony postfix 的 `XxxCompat` 方法或求解器根本不分发的钩子，各自需要一个新的接入点：
 
-**第 3 块：预视与选牌的搜索分支。** 7 张牌。这是搜索分支问题而不是镜像问题：预视要看牌堆顶 N
-张并选一个子集丢掉，得在 beam 上再开一层组合分支。目前按"一张都不丢"建模并记选择风险——那是
-玩家一定做得出的选择，所以路线仍然可执行，只是没有探索丢牌的可能性。仓库里有类似机制可参考
-（`KnowledgeDemonChoiceSupport`、`TurnStartChoiceSupport`、`UnresolvedPlayerChoice`）。成本估不准。
+| 缺口 | 内容 | 影响 |
+|---|---|---|
+| `AfterSideTurnStartCompat` | 深思沉眠的下回合结算、预测移动改写敌人意图 | 两个 Power 完全不生效 |
+| `BeforeHandDrawCompat` | 观者状态的延迟保留、预知的回合初预视 | 保留和预视时机错 |
+| `AfterCardRetained` / `AfterFlush` | 洗炼的格挡、时之沙的费用、风车打击的伤害逐次增长 | 这三张牌在路线内被保留时数值不涨，系统性低估 |
+| `OnScryDiscarded` | 圣歌与启示这两张不可打出牌的全部效果 | 完全不生效 |
+| `AfterCardChangedPiles` | 凌波微步的延迟抽牌、陶瓷鱼的金币 | 凌波微步在出牌堆非空时的抽牌漏掉 |
+| `AfterEnergyReset` | 神性形态的能量、能量下降 | 能量算错 |
+| `AfterPlayerTurnStartEarly` | 观者状态的每回合计数器重置、神威天罚的每回合一次重置、悟命的真言发放 | 计数器不重置；神威天罚因此只能记风险不生效 |
 
-**第 4 块：9 个遗物 + 3 个药水。** 量小。其中 `PureWater` 不需要镜像——它在战斗开局往手里塞
-奇迹，而求解器的根快照是在战斗开始之后取的，那张奇迹本来就在手上了。
+`AfterEnergyReset` 有现成接入点（`TurnStartRelicSupport.TriggerAfterEnergyReset`），是下一个
+最容易补的。`AfterPlayerTurnStartEarly` 没有独立接入点，但可以并到已有的回合开始补丁里，
+只要确认它的时机在求解器流程里对得上。
+
+**第 3 块：预视与选牌的搜索分支。** 7 张牌加姿态药水和天赋护符。这是搜索分支问题而不是镜像
+问题：预视要看牌堆顶 N 张并选一个子集丢掉，得在 beam 上再开一层组合分支。目前按"一张都不丢"
+建模并记选择风险——那是玩家一定做得出的选择，所以路线仍然可执行，只是没有探索丢牌的可能性。
+仓库里有类似机制可参考（`KnowledgeDemonChoiceSupport`、`TurnStartChoiceSupport`、
+`UnresolvedPlayerChoice`）。成本估不准。
+
+**第 4 块：遗物与药水。已完成。** 见 [README](../README.md#遗物药水与钩子)。
 ## 已知的坑
 
 **`SemanticStateFieldPolicy.ClassifyString` 会抛异常**，对任何未分类的 `StringVar` 状态字段。
