@@ -1,3 +1,4 @@
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Modding;
@@ -67,6 +68,16 @@ public static class Entry
         onPlay.Register<WatcherEruption_P>(StarterDeckMirrors.Eruption);
         onPlay.Register<WatcherVigilance>(StarterDeckMirrors.Vigilance);
         onPlay.Register<WatcherMiracle>(StarterDeckMirrors.Miracle);
+
+        // 两条 Harmony 补丁补的是求解器根本没有注册表的位置：回合结束的 AfterSideTurnEnd
+        // 和回合开始的遗物流程。目标方法解析不到就在这里抛出去，让整个注册失败。
+        var harmony = new Harmony(ModId);
+        harmony.Patch(
+            WatcherTurnEndPatch.ResolveTarget(),
+            postfix: new HarmonyMethod(typeof(WatcherTurnEndPatch), nameof(WatcherTurnEndPatch.Postfix)));
+        harmony.Patch(
+            WatcherTurnStartPatch.ResolveTarget(),
+            postfix: new HarmonyMethod(typeof(WatcherTurnStartPatch), nameof(WatcherTurnStartPatch.Postfix)));
 
         WatcherHookMirrors.RegisterAll();
 

@@ -25,6 +25,7 @@ internal static class WatcherHookMirrors
     public static void RegisterAll()
     {
         AfterCardPlayedMirrors.Registry.Register<WatcherStatePower>(StatePowerAfterCardPlayed);
+        WatcherItemMirrors.RegisterAll();
     }
 
     /// <summary>

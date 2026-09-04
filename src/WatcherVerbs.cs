@@ -210,123 +210,30 @@ internal static class WatcherVerbs
             Owner(context), pile, count, Owner(context), position);
     }
 
-    // ---------- 观者专有 ----------
+    // ---------- 观者专有：一律委托给通用实现 ----------
+    //
+    // 这些动词遗物和药水也要用，实现放在 WatcherSimVerbs 上。这里只做上下文转换，不重复
+    // 写一份逻辑——两份实现迟早会各自演化，而这类分歧不会报编译错误。
 
-    /// <summary>对应 WatcherCombatHelper.GainMantra，含真言满 10 转神圣。</summary>
-    /// <remarks>
-    /// 转换规则来自 Mantra.AfterPowerAmountChangedCompat：阈值是变更后 Amount 大于等于 10，
-    /// 减的是正好 10 而不是清零，而且 _isResolving 闩锁让嵌套的那次变更不再触发钩子。所以
-    /// 0 到 20 只转换一次、留下 10。这里不能写成循环。
-    ///
-    /// 原版这条路径挂在 hook 广播方法的 Harmony postfix 上，求解器用自己的 mirror 替掉了整个
-    /// hook 分发、从不调那个被打补丁的方法，所以它既不生效也不记风险——是必须手写补上的五个
-    /// 无声缺口之一。
-    /// </remarks>
     public static void GainMantra(CardOnPlayMirrorContext context, int amount)
-    {
-        if (amount <= 0)
-            return;
-        SimulatedCombatState combat = Combat(context);
-        Creature self = Self(context);
+        => WatcherSimVerbs.GainMantra(WatcherSim.From(context), amount);
 
-        WatcherStatePower state = EnsureState(context);
-        state.TotalMantraGainedThisCombat += amount;
-        state.MantraGainedThisTurn += amount;
-
-        Effects(context).ApplyPower(typeof(Mantra), self, amount, self);
-
-        if (combat.GetMutablePower<Mantra>(self) is not { Amount: >= 10 } mantra)
-            return;
-        combat.SetPowerAmount(mantra, mantra.Amount - 10);
-        WatcherStanceVerbs.EnterDivinity(context);
-    }
-
-    /// <summary>对应 WatcherCombatHelper.EnsureState：没有就以数量 1 施加一个。</summary>
-    /// <remarks>
-    /// 返回的一定是可变克隆。WatcherStatePower 的计数器 setter 会走 AssertMutable，对根实例
-    /// 赋值会抛异常。
-    /// </remarks>
     public static WatcherStatePower EnsureState(CardOnPlayMirrorContext context)
-    {
-        SimulatedCombatState combat = Combat(context);
-        Creature self = Self(context);
-        if (combat.GetAmount<WatcherStatePower>(self) <= 0)
-            Effects(context).ApplyPower(typeof(WatcherStatePower), self, 1, self);
-        return combat.GetMutablePower<WatcherStatePower>(self)
-            ?? throw new InvalidOperationException("施加后仍然取不到观者状态 Power。");
-    }
+        => WatcherSimVerbs.EnsureState(WatcherSim.From(context));
 
     public static WatcherStatePower? PeekState(CardOnPlayMirrorContext context)
-        => Combat(context).GetPower<WatcherStatePower>(Self(context));
+        => WatcherSimVerbs.PeekState(WatcherSim.From(context));
 
-    /// <summary>对应 WatcherCombatHelper.ConsumeKnowFate。返回实际消耗掉的天命层数。</summary>
-    /// <remarks>
-    /// 两个细节按原版实现：尝试标记 KnowFateConsumptionAttemptedThisCard 在检查层数之前就置位，
-    /// 也就是即使一层都没消耗到也算尝试过；消耗满的时候是移除整个 Power 而不是减到 0。
-    /// </remarks>
     public static int ConsumeKnowFate(CardOnPlayMirrorContext context, int amount)
-    {
-        if (amount <= 0)
-            return 0;
-        SimulatedCombatState combat = Combat(context);
-        Creature self = Self(context);
+        => WatcherSimVerbs.ConsumeKnowFate(WatcherSim.From(context), amount);
 
-        WatcherStatePower state = EnsureState(context);
-        state.KnowFateConsumptionAttemptedThisCard = true;
-
-        if (combat.GetMutablePower<KnowFatePower>(self) is not { Amount: > 0 } power)
-            return 0;
-
-        int consumed = Math.Min(power.Amount, amount);
-        state.KnowFateConsumedThisTurn = true;
-        combat.SetPowerAmount(power, power.Amount - consumed);
-        state.KnowFateLastObserved = combat.GetAmount<KnowFatePower>(self);
-        return consumed;
-    }
-
-    /// <summary>对应 WatcherCombatHelper.GetEffectiveScryAmount。</summary>
     public static int EffectiveScryAmount(CardOnPlayMirrorContext context, int amount)
-    {
-        if (amount <= 0)
-            return 0;
-        if (Owner(context).Relics.Any(relic => relic.Id.Entry == "GOLDEN_EYE"))
-            amount += 2;
-        if (PowerAmount<GuardNextScryPower>(context) > 0)
-            amount = Math.Max(0, amount - 2);
-        return amount;
-    }
+        => WatcherSimVerbs.EffectiveScryAmount(WatcherSim.From(context), amount);
 
-    /// <summary>
-    /// 预视。只镜像它的连带效果，不镜像玩家挑哪几张丢掉。
-    /// </summary>
-    /// <remarks>
-    /// 挑牌是搜索分支问题而不是镜像问题：要在 beam 上再开一层组合分支。这里按"一张都不丢"
-    /// 建模，因为那是玩家一定可以做出的选择，所以路线仍然可执行；同时记一条选择风险，让求解器
-    /// 明确说出这条路线没有探索丢牌的可能性，而不是假装探索过了。
-    ///
-    /// 连带效果照原版 OnScry 实现：涅槃按层数给不受力量影响的格挡，弃牌堆里的经纬回手。
-    /// </remarks>
     public static void Scry(CardOnPlayMirrorContext context, int amount)
-    {
-        int effective = EffectiveScryAmount(context, amount);
-        if (effective <= 0)
-            return;
+        => WatcherSimVerbs.Scry(WatcherSim.From(context), amount, context.PreviewCard.Id.Entry);
 
-        if (PowerAmount<NirvanaPower>(context) is > 0 and var nirvana)
-            BlockFor(context, nirvana, ValueProp.Unpowered);
-
-        PredictedCard[] weaves = context.OwnerState.DiscardPile.Cards
-            .Where(card => card.Preview.Id.Entry == "WATCHER_WEAVE")
-            .ToArray();
-        if (weaves.Length > 0)
-            context.Simulator.AddToPile(weaves, PileType.Hand);
-
-        PlayerChoice(context, $"{context.PreviewCard.Id.Entry} 预视 {effective} 张后丢弃哪几张");
-    }
-
-    /// <summary>
-    /// 额外回合。只施加 Power，不代替求解器结束回合。
-    /// </summary>
+    /// <summary>额外回合。只施加 Power，不代替求解器结束回合。</summary>
     /// <remarks>
     /// 原版 TakeExtraTurn 施加 WatcherExtraTurnPower 之后会强制结束回合，但结束回合在求解器
     /// 里是它自己的一个动作、由搜索决定，卡牌镜像不该越过它去改回合流程。所以这里只施加 Power
