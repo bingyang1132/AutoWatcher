@@ -94,22 +94,31 @@ SolverWatcherAdapter
 
 其余 gameplay mod 暂存到 `mods_staged_by_claude/`，测完可以移回去。
 
-## 验收结果（2026-09-04，6/6 通过）
+## 验收结果（2026-09-04，10/10 通过）
 
 对 `游戏 v0.111.0 + 观者 0.9.25 + CombatSolver 0.29.0 + 适配 0.1.0` 实测：
 
 | 用例 | 判别依据 | 结果 |
 |---|---|---|
-| `WATCHER-ERUPTION-WRATH` | 爆发是首个动作，未镜像项 0 | 通过 |
+| `WATCHER-ERUPTION-WRATH` | 爆发是首个动作 | 通过 |
 | `WATCHER-VIGILANCE-BLOCK` | 首回合格挡峰值 ≥ 8 | 通过 |
 | `WATCHER-CALM-EXIT-ENERGY` | 固定 4 能量下首回合 3 个动作（没有退出平静的 2 点则任何顺序都只有 2 个） | 通过 |
 | `WATCHER-MIRACLE-ENERGY` | 首回合 3 个动作（没有奇迹的 1 点则第二张爆发付不起） | 通过 |
 | `WATCHER-WRATH-DOUBLE-DAMAGE` | 单敌人 21 血第一回合击杀（9 + 6×2；没有翻倍只有 15） | 通过 |
+| `WATCHER-MANTRA-TO-DIVINITY` | 固定 4 能量下首回合 3 个动作（真言满 10 转神圣补 3 点才付得起第三张） | 通过 |
+| `WATCHER-JUDGMENT-EXECUTE` | 21 血敌人第一回合被斩杀（没有击杀动词则这张牌是空操作） | 通过 |
+| `WATCHER-SPIRIT-SHIELD-SCALING` | 四张打击在手时格挡峰值 ≥ 12（= 手牌数 × 3，且不计自己） | 通过 |
+| `WATCHER-WREATH-VIGOR-DAMAGE` | 11 血敌人第一回合击杀（打击 6 + 激励 5；没施加 Power 只有 6） | 通过 |
 | `WATCHER-STANCE-REGRESSION-LOCK` | 100 血投影三回合结束，终局敌方总生命 0 | 通过 |
 
-前五条都是算术判别：镜像算错，数值就对不上。第六条是实测出来的回归锁。
-六条都带 `-ExpectedInitialUnmirroredCount 0`，所以**求解器在观者初始牌组上不报告任何未镜像
-效果**——验收标准的第二条已经成立。
+前九条都是算术判别：镜像算错，数值就对不上。第十条是实测出来的回归锁。
+十条都带 `-ExpectedInitialUnmirroredCount 0`，所以**求解器在这些路线上不报告任何未镜像
+效果**——验收标准的第二条成立。
+
+其中真言那条一开始没过，但失败的是未镜像项而不是动作数：转换和补能量本来就对，只是
+`WatcherStatePower` 重写了 `AfterCardPlayed`，而那是求解器会分发的钩子，未知类型每打一张牌
+就记一条风险。补上那个钩子的镜像之后归零。这也是这套验收标准的价值所在——它把一个"结果
+正确但会淹没红字"的问题顶了出来。
 
 重跑：
 
