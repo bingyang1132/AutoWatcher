@@ -1,0 +1,25 @@
+{
+  "id": "SolverWatcherAdapter",
+  "name": "观者求解器适配",
+  "author": "bingyang1132",
+  "description": "教战斗路线求解器预测观者角色的牌与姿态。本 mod 不改变任何游戏行为，只补上求解器缺失的模拟镜像。需要同时装有战斗路线求解器和观者 mod。",
+  "version": "0.1.0",
+  "has_pck": false,
+  "has_dll": true,
+  "affects_gameplay": false,
+  "min_game_version": "0.111.0",
+  "dependencies": [
+    {
+      "id": "STS2-RitsuLib",
+      "min_version": "0.5.13"
+    },
+    {
+      "id": "CombatSolver",
+      "min_version": "0.29.0"
+    },
+    {
+      "id": "Watcher",
+      "min_version": "0.9.25"
+    }
+  ]
+}

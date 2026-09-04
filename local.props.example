@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- 复制成 local.props 并按你的安装路径改。 -->
+    <SteamRoot>D:/Sponsored/Steam</SteamRoot>
+  </PropertyGroup>
+</Project>
