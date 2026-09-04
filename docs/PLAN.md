@@ -9,12 +9,12 @@
 | `DamageCmd.Attack` | 31 | 求解器通用攻击镜像已覆盖 |
 | `CreatureCmd.GainBlock` | 18 | 求解器通用格挡镜像已覆盖 |
 | `CardPileCmd.Draw` | 7 | 求解器通用抽牌镜像已覆盖 |
-| `WatcherPowerCmdCompat.Apply<T>` | 36 | **待做**，见下 |
+| `WatcherPowerCmdCompat.Apply<T>` | 36 | **已做**（泛型施加任意 PowerModel） |
 | `EnterWrath/Calm/Divinity/Foreseen` + `ExitStance` | 18 | **已做** |
-| `GainMantra` / `ConsumeKnowFate` | 5 | 待做 |
-| `Scry` / `ChooseOne` | 6 | 搜索分支问题，见第三块 |
-| `CreateWatcherCard` / `TakeExtraTurn` / `DeferRetainCard` | 4 | 待做 |
-| 原版零头（`GainEnergy` 3、`Add` 2、`AutoPlay` 2、`Upgrade`/`Exhaust`/`Kill`/`Damage`/`GainGold` 各 1） | 11 | 部分已有镜像 |
+| `GainMantra` / `ConsumeKnowFate` | 5 | **已做**（含满 10 转神圣） |
+| `Scry` / `ChooseOne` | 7 | 连带效果已做，挑牌记选择风险，见第三块 |
+| `CreateWatcherCard` / `TakeExtraTurn` / `DeferRetainCard` | 4 | **已做** |
+| 原版零头（`GainEnergy` 3、`Add` 2、`AutoPlay` 2、`Upgrade`/`Exhaust`/`Kill`/`Damage`/`GainGold` 各 1） | 11 | **已做** |
 
 两个让这件事成立的结构性事实：
 
@@ -29,42 +29,36 @@
 
 ## 已完成
 
-**第 0 块：探天花板。** 确认无头 harness 可用（`SMOKE-001` 通过），因此严格 diff 式的验收是
-可行的。确认装上观者后求解器只在一个地方硬失败：
+**第 0 块：探天花板。** 确认无头 harness 可用（`SMOKE-001` 通过），因此严格核对式的验收是可行的。
+确认装上观者后求解器只在一个地方硬失败：
 `IncompatibleGameplayModException: ... WatcherMod.WatcherEnchantStackHookProxy`。
+另外确认了 LotmMod 会更早触发同一道门，所以测试必须收窄 mod 集。
 
-**第 1 块（部分）：初始牌组 + 姿态动词。** 见 [README](../README.md#当前覆盖范围)。
+**第 1 块：效果动词层 + 全部 101 张牌的 OnPlay 镜像。** 见 [README](../README.md#当前覆盖范围)。
+真言满 10 转神圣也在动词层里补上了，那是五个无声缺口里最要紧的一个。
+
+**指纹问题的结论：比预想的小得多。** 三份逐牌转写表核对下来，**没有任何一张牌的 `OnPlay` 读取
+`WatcherStatePower` 的字段**，只有写入。唯一的读者是 `WATCHER_BRILLIANCE`（读
+`TotalMantraGainedThisCombat`）。所以整个指纹风险被隔离在一张牌上，处理方式是：计数不为零时
+才记一条风险，把这个已知的不确定性显式说出来。不需要为它动求解器，也不需要上 Harmony。
 
 ## 待做
 
-**第 1 块剩余：`WatcherPowerCmdCompat.Apply` 动词 + 真言与天命计数。**
-36 张牌等这一个动词。真言和天命的计数存在 `WatcherStatePower` 的私有 CLR 字段里；
-`PredictionUtils.CloneModelForSimulation` 用的是 `MemberwiseClone`，所以这些 int 在克隆时自动
-带过去，根状态播种是对的。**但状态指纹不包含它们**，意味着只在计数上不同的两条分支会被去重
-掉。这是接这一块时唯一需要认真处理的问题，处理方式有两条路：
+**第 2 块：剩下四个 Harmony 路由的回合流程钩子。**
+观者把 `BeforeHandDraw`、`AfterSideTurnStart`、`AfterFlush`、`AfterCardRetained` 挂在原版 hook
+广播方法的 Harmony postfix 上，实现方法叫 `XxxCompat`。求解器用自己的 mirror 替掉了整个 hook
+分发、从不调那个被打补丁的方法，所以这些**既不生效也不记风险**。涉及的能力：预知的回合初预视、
+观者状态的回合初重置、预测移动、深思沉眠，以及三张牌被保留时的数值增长
+（`WATCHER_PERSEVERANCE` 的格挡、`WATCHER_SANDS_OF_TIME` 的费用、`WATCHER_WINDMILL_STRIKE`
+的伤害）。第五个 `AfterPowerAmountChanged` 已经在动词层里覆盖了。
 
-- 把计数折射进一个求解器指纹能看见的地方（代价是要动求解器，或者上 Harmony）；
-- 或者先只接不影响指纹的部分（比如 `TotalMantraGainedThisCombat` 只被光辉的伤害读，如果
-  在一条路线内它单调不减，去重的风险可能可控）。
+**第 3 块：预视与选牌的搜索分支。** 7 张牌。这是搜索分支问题而不是镜像问题：预视要看牌堆顶 N
+张并选一个子集丢掉，得在 beam 上再开一层组合分支。目前按"一张都不丢"建模并记选择风险——那是
+玩家一定做得出的选择，所以路线仍然可执行，只是没有探索丢牌的可能性。仓库里有类似机制可参考
+（`KnowledgeDemonChoiceSupport`、`TurnStartChoiceSupport`、`UnresolvedPlayerChoice`）。成本估不准。
 
-这个判断必须在真实数据上做，不要凭推理决定。
-
-**第 2 块：五个 Harmony 路由的 hook。**
-观者把 `BeforeHandDraw`、`AfterPowerAmountChanged`、`AfterSideTurnStart`、`AfterFlush`、
-`AfterCardRetained` 挂在原版 hook 广播方法的 Harmony postfix 上，实现方法叫 `XxxCompat`。
-求解器用自己的 mirror 替掉了整个 hook 分发，从不调那个被打补丁的方法，所以这五个**既不生效
-也不记风险**——是唯一一类无声的缺口。其中 `Mantra.AfterPowerAmountChangedCompat` 是真言攒到
-10 转神圣，观者的核心循环。
-
-已知的实现细节（来自反编译）：阈值是变更后 `Amount >= 10`，减的是正好 10 而不是清零，而且
-`_isResolving` 闩锁意味着 0 到 20 只转换一次、留下 10。**不要写成循环。**
-
-**第 3 块：预视与选牌。** 6 张牌。这是搜索分支问题而不是镜像问题：预视要看牌堆顶 N 张并选一个
-子集丢掉，得在 beam 上再开一层组合分支。仓库里有类似机制可参考（`KnowledgeDemonChoiceSupport`、
-`TurnStartChoiceSupport`、`UnresolvedPlayerChoice`）。成本估不准。
-
-**第 4 块：9 个遗物 + 3 个药水。** 量小。
-
+**第 4 块：9 个遗物 + 3 个药水。** 量小。其中 `PureWater` 不需要镜像——它在战斗开局往手里塞
+奇迹，而求解器的根快照是在战斗开始之后取的，那张奇迹本来就在手上了。
 ## 已知的坑
 
 **`SemanticStateFieldPolicy.ClassifyString` 会抛异常**，对任何未分类的 `StringVar` 状态字段。

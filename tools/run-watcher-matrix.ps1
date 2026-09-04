@@ -115,6 +115,65 @@ $cases = @(
         )
     },
     @{
+        # 观者的核心循环：真言攒满 10 转神圣，进神圣再给 3 点能量。纯算术：
+        #   固定 4 点能量。膜拜 2 费给 5 真言 -> 剩 2 点。
+        #   第二张膜拜 2 费 -> 剩 0 点，真言到 10，转成神圣，进神圣补 3 点 -> 剩 3 点。
+        #   打击 1 费 -> 剩 2 点。共 3 个动作。
+        # 转换没建模的话真言停在 10、不进神圣、不补能量，打击付不起，只有 2 个动作。
+        # 这条走的是 Harmony postfix 那条无声路径，求解器从不调那个方法，必须手写补上，
+        # 所以它同时也是"五个无声缺口"里最要紧那一个的验证。
+        Id = "WATCHER-MANTRA-TO-DIVINITY"
+        Why = "真言满 10 转神圣并补 3 点能量。没建模的话第三个动作付不起。"
+        Args = @(
+            "-EnemyCurrentHp", "120", "-ClearPlayerPiles", "-InitialPlayerEnergy", "4",
+            "-CardsJson", (Hand @("WATCHER_WORSHIP", "WATCHER_WORSHIP", "WATCHER_STRIKE_P")),
+            "-ExpectedInitialExecutableActionCountAtLeast", "3",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 直接击杀动词。审判比的是当前生命，21 <= 30 所以斩杀成立。
+        # 没有击杀动词的话这张牌是纯空操作，敌人活着，投影结束回合不会是 1。
+        Id = "WATCHER-JUDGMENT-EXECUTE"
+        Why = "审判在目标生命不高于阈值时直接击杀。没建模的话这张牌什么都不做。"
+        Args = @(
+            "-InitialEnemyCurrentHpsJson", "[21]", "-ClearPlayerPiles",
+            "-CardsJson", (Hand @("WATCHER_JUDGMENT")),
+            "-ExpectedInitialCombatEndedTurn", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 格挡数值来自手牌数而不是固定值。护体结算时自己已经离开手牌，
+        # 所以手里剩 4 张打击，格挡 = 4 x 3 = 12。
+        # 按固定值或者把自己也数进去，得到的都不是 12。
+        Id = "WATCHER-SPIRIT-SHIELD-SCALING"
+        Why = "护体的格挡等于手牌数乘 3，且不计自己。四张打击在手时应为 12。"
+        Args = @(
+            "-EnemyCurrentHp", "120", "-ClearPlayerPiles",
+            "-CardsJson", (Hand @(
+                "WATCHER_SPIRIT_SHIELD",
+                "WATCHER_STRIKE_P", "WATCHER_STRIKE_P",
+                "WATCHER_STRIKE_P", "WATCHER_STRIKE_P")),
+            "-ExpectedInitialMaxBlockAtLeast", "12",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 泛型施加任意 PowerModel 的端到端验证，也就是那 36 张"施加一个 Power"的牌走的路径。
+        # 烈焰之环给 5 点激励，激励加到下一次攻击上：打击 6 + 5 = 11，正好击杀 11 血。
+        # Power 没被施加的话只有 6 点，杀不掉。
+        # 激励的伤害加成来自原版 VigorPower 的只读钩子，求解器本来就会回落到它的实现，
+        # 所以这条同时验证了"姿态与 Power 一旦在模拟里正确，倍率和加成就自动正确"这个前提。
+        Id = "WATCHER-WREATH-VIGOR-DAMAGE"
+        Why = "烈焰之环施加 5 点激励，让打击 6 点变 11 点，正好击杀 11 血。"
+        Args = @(
+            "-InitialEnemyCurrentHpsJson", "[11]", "-ClearPlayerPiles",
+            "-CardsJson", (Hand @("WATCHER_WREATH_OF_FLAME", "WATCHER_STRIKE_P")),
+            "-ExpectedInitialCombatEndedTurn", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },    @{
         # 回归锁，不是算术判别。3 这个数是对已验证的构建实测出来的，
         # 不是推导出来的。姿态或伤害倍率的建模一旦变化，这个回合数就会变。
         Id = "WATCHER-STANCE-REGRESSION-LOCK"
