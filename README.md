@@ -120,7 +120,7 @@ SolverWatcherAdapter
 
 其余 gameplay mod 暂存到 `mods_staged_by_claude/`，测完可以移回去。
 
-## 验收结果（2026-09-04，10/10 通过）
+## 验收结果（2026-09-04，11/11 通过）
 
 对 `游戏 v0.111.0 + 观者 0.9.25 + CombatSolver 0.29.0 + 适配 0.1.0` 实测：
 
@@ -135,10 +135,11 @@ SolverWatcherAdapter
 | `WATCHER-JUDGMENT-EXECUTE` | 21 血敌人第一回合被斩杀（没有击杀动词则这张牌是空操作） | 通过 |
 | `WATCHER-SPIRIT-SHIELD-SCALING` | 四张打击在手时格挡峰值 ≥ 12（= 手牌数 × 3，且不计自己） | 通过 |
 | `WATCHER-WREATH-VIGOR-DAMAGE` | 11 血敌人第一回合击杀（打击 6 + 激励 5；没施加 Power 只有 6） | 通过 |
+| `WATCHER-SANDS-RETAIN-COST` | 手上只有时之沙时第二回合结束（4 费付不起、保留降 1 费后才付得起） | 通过 |
 | `WATCHER-STANCE-REGRESSION-LOCK` | 100 血投影三回合结束，终局敌方总生命 0 | 通过 |
 
-前九条都是算术判别：镜像算错，数值就对不上。第十条是实测出来的回归锁。
-十条都带 `-ExpectedInitialUnmirroredCount 0`，所以**求解器在这些路线上不报告任何未镜像
+前十条都是算术判别：镜像算错，数值就对不上。第十条是实测出来的回归锁。
+十一条都带 `-ExpectedInitialUnmirroredCount 0`，所以**求解器在这些路线上不报告任何未镜像
 效果**——验收标准的第二条成立。
 
 其中真言那条一开始没过，但失败的是未镜像项而不是动作数：转换和补能量本来就对，只是
@@ -151,6 +152,15 @@ SolverWatcherAdapter
 ```bash
 pwsh -NoProfile -File tools/run-watcher-matrix.ps1
 ```
+### 实机报告过的偏差
+
+打旧日雕像时出现过数次计划外重算。日志里 `SEARCH_REUSE_MISS` 给出的四处差异全部归结为两个
+缺口，都已修复：生成的洞察没继承升级（三处）、时之沙被保留后没降费（一处）。同一份日志里
+观者相关的未镜像项也只有明察那一条，正是同一个升级问题。
+
+剩下的唯一一条 `SHRINK_POWER / AfterDeath` 是原版求解器的已知缺口且标了 `compensated=True`，
+与适配层无关。
+
 ## 强度验收标准
 
 **不要用胜率或手感做验收。** 姿态被冻结时求解器会低估自己在愤怒姿态下的伤害，于是打得保守，
