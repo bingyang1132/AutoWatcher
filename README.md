@@ -40,29 +40,47 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 
 ## 当前覆盖范围
 
-**初始牌组，5 张牌全覆盖：**
+**全部 101 张观者卡牌都注册了精确镜像。** 观者的牌实际只用到十来个效果动词，绝大多数牌是
+原版命令加一个观者动词，所以镜像是声明式的组合，一张牌一个方法、一行一效果、按反编译源码的
+调用顺序排列，可以逐行对照 `docs/` 里那份逐牌转写表来审。
 
-| 牌 | 效果 | 镜像方式 |
-|---|---|---|
-| `WATCHER_STRIKE_P` | 6 伤害 | 复用求解器通用攻击镜像 |
-| `WATCHER_DEFEND_P` | 5 格挡 | 复用求解器通用格挡镜像 |
-| `WATCHER_ERUPTION_P` | 9 伤害，进入愤怒 | 通用攻击 + 姿态动词 |
-| `WATCHER_VIGILANCE` | 8 格挡，进入平静 | 通用格挡 + 姿态动词 |
-| `WATCHER_MIRACLE` | 1 能量（清水遗物每场开局塞一张） | 直接给能量 |
+**动词层**（`src/WatcherVerbs.cs`）：攻击（单体、全体、随机、多段、显式数值）、格挡、抽牌、
+能量、任意 PowerModel 的施加与设值、生成牌进任意牌堆、牌堆间移动、直接击杀、真言（含满 10
+转神圣）、天命消耗、预视的连带效果、额外回合、以及读取手牌数、敌人数、目标生命、上一张牌类型。
 
-**姿态动词**，对应 `WatcherCombatHelper.ChangeStance<T>`：入定锁检查、同姿态短路、按
-神圣→预知→愤怒→平静顺序清除、施加新姿态、平静退出 +2 能量、神圣进入 +3 能量。
+**姿态动词**（`src/WatcherStanceVerbs.cs`）：入定锁检查、同姿态短路、按神圣→预知→愤怒→平静
+顺序清除、施加新姿态、平静退出 +2 能量、神圣进入 +3 能量，以及姿态变化的连带效果——心之堡垒
+的格挡、紫莲花的能量、疾风连打从弃牌堆回手。
 
-姿态本身就是原版可见的 `PowerModel`，所以按 Power 施加和清零之后，求解器的状态指纹、剪枝和
-去重都自动认得它，不需要额外的预测状态。这也让 `Wrath`/`Divinity` 的伤害倍率自动正确——只读
-钩子求解器本来就会回落到 mod 自己的实现。
+姿态本身就是原版可见的 `PowerModel`，按 Power 施加和清零之后求解器的状态指纹、剪枝和去重都
+自动认得它，所以不需要额外的预测状态，`Wrath` 和 `Divinity` 的伤害倍率也自动正确——只读钩子
+求解器本来就会回落到 mod 自己的实现。
 
-**姿态切换的六路连带效果**：心之堡垒的格挡和紫莲花的能量已实现；凌波微步的抽牌、疾风连打
-回手、退出预知的悟命会记一条风险，在求解器里显示成红色的"未镜像"，而不是静默算错。
+### 显式记为未镜像的部分
 
-**未覆盖**：其余约 96 张牌、9 个遗物、3 个药水。预视和选牌类效果是搜索分支问题而不是镜像问题，
-需要单独处理。
+下表里的牌用 mod 的牌 ID 指称，不用中文名——观者的官方中文名要从游戏本地化里核对，这份文档还没核对过。
 
+这些地方求解器会显示成红色，不会静默算错：
+
+| 内容 | 原因 |
+|---|---|
+| `WATCHER_CUT_THROUGH_FATE` / `WATCHER_JUST_LUCKY` / `WATCHER_THIRD_EYE` 的预视丢牌选择 | 挑哪几张丢是搜索分支问题，要在 beam 上再开一层组合分支。连带效果（涅槃格挡、经纬回手）已实现，按"一张都不丢"建模，那是玩家一定做得出的选择，所以路线仍可执行 |
+| `WATCHER_OMNISCIENCE` / `WATCHER_FOREIGN_INFLUENCE` / `WATCHER_MEDITATE` / `WATCHER_WISH_P` 的选牌 | 同上 |
+| `WATCHER_DRAW_TALISMAN` 的批量临时附魔 | 需要附魔系统的建模 |
+| `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 求解器的生成接口按牌类型创建规范实例，不接受实例级负载 |
+| `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 那个 Power 自己维护一个实例表，N 张牌是 N 个独立成长的实例，不等于一个数量为 N 的实例 |
+| `WATCHER_PERSEVERANCE` / `WATCHER_SANDS_OF_TIME` / `WATCHER_WINDMILL_STRIKE` 被保留时的数值增长 | 发生在保留钩子里。根状态克隆时已带上之前累积的结果，缺的只是路线内部发生的保留 |
+| `WATCHER_CONCLUDE` / `WATCHER_MEDITATE` / `WATCHER_VAULT` 打出后强制结束回合 | 结束回合在求解器里是它自己的动作、由搜索决定，卡牌镜像不该越过它改回合流程 |
+| `WATCHER_PRESSURE_POINTS` 的无视格挡伤害 | 带 Unblockable 和 Unpowered，动词层里没有对应形式。标记本身叠对了 |
+| `WATCHER_LESSON_LEARNED` 的永久牌组升级 | 超出单场战斗模拟的范围 |
+| `WATCHER_BRILLIANCE` 的伤害 | 取自 `WatcherStatePower` 的私有计数器，而该计数不在状态指纹里。只在计数不为零时才记风险 |
+| 三张牌的"上一张牌类型"条件 | 路线的第一张牌在模拟历史里看不到前一张。不从镜像读实时状态，因为镜像跑在后台线程上 |
+
+多人局专属牌（`WATCHER_COLD_OBSERVATION`、`WATCHER_MOCKERY`、`WATCHER_PERSUASION`、`WATCHER_RELINQUISH`、`WATCHER_SANCTIFICATION`）注册成记风险而不是空操作：求解器只支持
+单人战斗，万一它们出现要能立刻看见。
+
+**仍未覆盖**：9 个遗物、3 个药水，以及五个走 Harmony postfix 的回合流程钩子
+（详见 `docs/PLAN.md`）。
 ## 测试环境要求
 
 **必须收窄 mod 集。** 你装的 LotmMod 会让求解器停在同一道门上

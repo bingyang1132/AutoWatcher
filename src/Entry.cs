@@ -24,6 +24,9 @@ public static class Entry
 
     private static Logger? _logger;
 
+    /// <summary>注册成功后记录实际注册了多少张牌，方便在日志里核对覆盖范围。</summary>
+    private static int RegisteredCardCount { get; set; }
+
     public static void Initialize()
     {
         _logger = RitsuLibFramework.CreateLogger(ModId);
@@ -47,7 +50,7 @@ public static class Entry
             return;
         }
 
-        _logger.Info($"已注册观者初始牌组镜像与姿态动词。{check.Detail}");
+        _logger.Info($"已注册 {RegisteredCardCount} 张观者卡牌的镜像与全套效果动词。{check.Detail}");
     }
 
     private static void RegisterAll()
@@ -65,8 +68,9 @@ public static class Entry
         onPlay.Register<WatcherVigilance>(StarterDeckMirrors.Vigilance);
         onPlay.Register<WatcherMiracle>(StarterDeckMirrors.Miracle);
 
-        WatcherCardMirrors.RegisterA(onPlay);
-        WatcherCardMirrors.RegisterB(onPlay);
-        WatcherCardMirrors.RegisterC(onPlay);
+        RegisteredCardCount = 5
+            + WatcherCardMirrors.RegisterA(onPlay)
+            + WatcherCardMirrors.RegisterB(onPlay)
+            + WatcherCardMirrors.RegisterC(onPlay);
     }
 }

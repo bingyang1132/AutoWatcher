@@ -24,7 +24,7 @@ internal static partial class WatcherCardMirrors
 
     private static int VarInt(CardModel card, string key) => card.DynamicVars[key].IntValue;
 
-    public static void RegisterA(MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> r)
+    public static int RegisterA(MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> r)
     {
         r.Register<WatcherAlpha>(Alpha);
         r.Register<WatcherBattleHymn>(BattleHymn);
@@ -58,6 +58,7 @@ internal static partial class WatcherCardMirrors
         r.Register<WatcherFasting2>(Fasting);
         r.Register<WatcherFearNoEvil>(FearNoEvil);
         r.Register<WatcherFlurryOfBlows>(FlurryOfBlows);
+        return 32;
     }
 
     /// <summary>OnPlay 本身没有任何游戏效果的牌：不可打出的标记牌、选项展示牌。</summary>

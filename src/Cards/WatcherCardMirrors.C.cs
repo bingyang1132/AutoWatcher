@@ -14,7 +14,7 @@ namespace SolverWatcherAdapter;
 
 internal static partial class WatcherCardMirrors
 {
-    public static void RegisterC(MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> r)
+    public static int RegisterC(MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> r)
     {
         r.Register<WatcherRushdown>(Rushdown);
         r.Register<WatcherSafety>(Safety);
@@ -48,6 +48,7 @@ internal static partial class WatcherCardMirrors
         r.Register<WatcherWorship>(Worship);
         r.Register<WatcherWreathOfFlame>(WreathOfFlame);
         // WatcherV2ChoiceTokenBase 是抽象基类，永远不会作为确切运行时类型出现，不注册。
+        return 31;
     }
 
     private static void Rushdown(WatcherRushdown card, CardOnPlayMirrorContext context)

@@ -13,7 +13,7 @@ namespace SolverWatcherAdapter;
 
 internal static partial class WatcherCardMirrors
 {
-    public static void RegisterB(MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> r)
+    public static int RegisterB(MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> r)
     {
         r.Register<WatcherFlyingSleeves>(FlyingSleeves);
         r.Register<WatcherFollowUp>(FollowUp);
@@ -47,6 +47,7 @@ internal static partial class WatcherCardMirrors
         r.Register<WatcherReachHeaven>(ReachHeaven);
         r.Register<WatcherRelinquish>(MultiplayerOnly);
         r.Register<WatcherRevelation_P>(NoOpOnPlay);
+        return 32;
     }
 
     private static void FlyingSleeves(WatcherFlyingSleeves card, CardOnPlayMirrorContext context)
