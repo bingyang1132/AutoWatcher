@@ -124,6 +124,77 @@ internal static class WatcherVerbs
         where TPower : PowerModel
         => Combat(context).GetAmount<TPower>(Self(context));
 
+    /// <summary>把 Power 设成确切数量而不是叠加。对应 WatcherPowerCmdCompat.SetAmount。</summary>
+    public static void SetPower(CardOnPlayMirrorContext context, Type powerType, int amount)
+    {
+        SimulatedCombatState combat = Combat(context);
+        Creature self = Self(context);
+        PowerModel? existing = combat.EffectivePowers()
+            .FirstOrDefault(power => power.GetType() == powerType && ReferenceEquals(power.Owner, self));
+        if (existing is null)
+        {
+            Effects(context).ApplyPower(powerType, self, amount, self);
+            return;
+        }
+        combat.SetPowerAmount(existing, amount);
+    }
+
+    // ---------- 读取 ----------
+
+    public static int CurrentHpOf(CardOnPlayMirrorContext context, Creature creature)
+        => context.State.GetCreature(creature).CurrentHp;
+
+    public static int HandCount(CardOnPlayMirrorContext context) => context.OwnerState.Hand.Cards.Count;
+
+    public static int HittableEnemyCount(CardOnPlayMirrorContext context)
+        => Combat(context).HittableEnemies.Count;
+
+    /// <summary>
+    /// 对应 WatcherSimpleAHelper.GetPreviousPlayedCardType：同一个主人打出的上一张牌的类型，
+    /// 排除当前这张。
+    /// </summary>
+    /// <remarks>
+    /// 原版读的是 CombatManager 的全局打牌历史，这里只能读模拟历史。两者的差别在于：搜索是从
+    /// 当前状态起算的，所以路线里的第一张牌在模拟历史里没有前一张，而实际对局中这一回合可能
+    /// 已经打过牌了。这种情况下返回 null 并记一条风险——宁可少报这个加成，也不要凭空假设一个
+    /// 类型。不从镜像里读 CombatManager，因为镜像跑在后台线程上，读实时状态是求解器明确禁止的。
+    /// </remarks>
+    public static CardType? PreviousPlayedCardType(CardOnPlayMirrorContext context)
+    {
+        Player owner = Owner(context);
+        CardModel self = context.PreviewCard;
+        CombatPredictionCardPlayStartedEntry? previous = context.History
+            .OfType<CombatPredictionCardPlayStartedEntry>()
+            .LastOrDefault(entry =>
+                ReferenceEquals(entry.CardPlay.Card.Owner, owner)
+                && !ReferenceEquals(entry.CardPlay.Card, self));
+        if (previous is not null)
+            return previous.CardPlay.Card.Type;
+        Unmirrored(context, $"{self.Id.Entry} 的上一张牌类型在搜索起点之前，模拟历史里看不到");
+        return null;
+    }
+
+    /// <summary>直接击杀目标，不走伤害。对应 CreatureCmd.Kill。</summary>
+    public static void KillTarget(CardOnPlayMirrorContext context)
+    {
+        if (context.CardPlay.Target is not { } target)
+        {
+            Unmirrored(context, $"{context.PreviewCard.Id.Entry} 需要目标但 CardPlay 没有给");
+            return;
+        }
+        Effects(context).DoomKill(context.Simulator, [target]);
+    }
+
+    /// <summary>把牌堆之间移动牌。</summary>
+    public static void MoveToPile(
+        CardOnPlayMirrorContext context,
+        IReadOnlyList<PredictedCard> cards,
+        PileType pile)
+    {
+        if (cards.Count > 0)
+            context.Simulator.AddToPile(cards, pile);
+    }
+
     // ---------- 生成牌 ----------
 
     public static void AddCards<TCard>(

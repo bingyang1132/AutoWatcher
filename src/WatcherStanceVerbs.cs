@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
@@ -135,8 +136,12 @@ internal static class WatcherStanceVerbs
             context.Simulator.GainEnergy(owner, 1m);
         }
 
-        if (context.OwnerState.DiscardPile.Cards.Any(card => card.Preview is WatcherFlurryOfBlows))
-            RecordUnmirrored(context, "疾风连打从弃牌堆回手");
+        // 任何姿态变化都让弃牌堆里的疾风连打回手，包括退出姿态。
+        PredictedCard[] flurries = context.OwnerState.DiscardPile.Cards
+            .Where(card => card.Preview is WatcherFlurryOfBlows)
+            .ToArray();
+        if (flurries.Length > 0)
+            context.Simulator.AddToPile(flurries, PileType.Hand);
 
         if (oldStance == typeof(Foreseen)
             && combat.GetPower<WatcherStatePower>(creature)?.KnowFateConsumedThisTurn == true)

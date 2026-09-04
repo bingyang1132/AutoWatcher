@@ -64,5 +64,9 @@ public static class Entry
         onPlay.Register<WatcherEruption_P>(StarterDeckMirrors.Eruption);
         onPlay.Register<WatcherVigilance>(StarterDeckMirrors.Vigilance);
         onPlay.Register<WatcherMiracle>(StarterDeckMirrors.Miracle);
+
+        WatcherCardMirrors.RegisterA(onPlay);
+        WatcherCardMirrors.RegisterB(onPlay);
+        WatcherCardMirrors.RegisterC(onPlay);
     }
 }
