@@ -68,6 +68,8 @@ public static class Entry
         onPlay.Register<WatcherVigilance>(StarterDeckMirrors.Vigilance);
         onPlay.Register<WatcherMiracle>(StarterDeckMirrors.Miracle);
 
+        WatcherHookMirrors.RegisterAll();
+
         RegisteredCardCount = 5
             + WatcherCardMirrors.RegisterA(onPlay)
             + WatcherCardMirrors.RegisterB(onPlay)
