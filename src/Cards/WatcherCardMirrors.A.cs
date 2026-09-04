@@ -236,15 +236,19 @@ internal static partial class WatcherCardMirrors
 
     /// <summary>升级版会把生成的那张洞察也升级掉。</summary>
     /// <remarks>
-    /// 求解器的生成接口按牌类型创建规范实例，没有"生成后立刻升级这一张"的形式，所以升级版
-    /// 记一条风险，生成的洞察按未升级算。
+    /// 生成接口会返回加进去的那张牌，所以拿到之后直接升级即可。实机报出来的第一处差异就是
+    /// 这里：预测 WATCHER_INSIGHT+0、实际 +1，导致续算作废。
     /// </remarks>
     private static void Evaluate(WatcherEvaluate card, CardOnPlayMirrorContext context)
     {
         V.Block(context);
-        V.AddCards<WatcherInsight>(context, PileType.Draw, 1, CardPilePosition.Random);
-        if (card.IsUpgraded)
-            V.Unmirrored(context, $"{card.Id.Entry} 升级版生成的洞察应当是升级过的");
+        foreach (SimCardPileAddResult added in context.Simulator
+                     .CreateAndAddGeneratedCardsToCombat<WatcherInsight>(
+                         card.Owner, PileType.Draw, 1, card.Owner, CardPilePosition.Random))
+        {
+            if (card.IsUpgraded)
+                context.Simulator.Upgrade(added.CardAdded);
+        }
     }
 
     private static void Expunger(WatcherExpunger card, CardOnPlayMirrorContext context)

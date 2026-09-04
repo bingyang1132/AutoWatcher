@@ -76,6 +76,9 @@ public static class Entry
             WatcherTurnEndPatch.ResolveTarget(),
             postfix: new HarmonyMethod(typeof(WatcherTurnEndPatch), nameof(WatcherTurnEndPatch.Postfix)));
         harmony.Patch(
+            WatcherRetainPatch.ResolveTarget(),
+            postfix: new HarmonyMethod(typeof(WatcherRetainPatch), nameof(WatcherRetainPatch.Postfix)));
+        harmony.Patch(
             WatcherPowerTurnStartPatch.ResolveTarget(),
             postfix: new HarmonyMethod(typeof(WatcherPowerTurnStartPatch), nameof(WatcherPowerTurnStartPatch.Postfix)));
         harmony.Patch(

@@ -174,6 +174,21 @@ $cases = @(
             "-ExpectedInitialUnmirroredCount", "0"
         )
     },    @{
+        # 实机报出来的那个 bug 的回归锁，纯算术：
+        #   起手 3 能量，时之沙 4 费，第一回合付不起。它带保留，所以留在手上，
+        #   而每次被保留费用降 1 -> 第二回合 3 费，正好付得起，20 点伤害击杀 20 血。
+        #   保留降费没建模的话费用永远是 4，这张牌一辈子打不出来，战斗不会在第二回合结束。
+        # 这条对应打旧日雕像时反复出现的计划外重算：日志里第一处差异就是这张牌的费用
+        # 预测 4、实际 3。
+        Id = "WATCHER-SANDS-RETAIN-COST"
+        Why = "时之沙每次被保留降 1 费。没建模的话 4 费永远付不起，第二回合结束不了。"
+        Args = @(
+            "-InitialEnemyCurrentHpsJson", "[20]", "-ClearPlayerPiles",
+            "-CardsJson", (Hand @("WATCHER_SANDS_OF_TIME")),
+            "-ExpectedInitialCombatEndedTurn", "2",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },    @{
         # 回归锁，不是算术判别。3 这个数是对已验证的构建实测出来的，
         # 不是推导出来的。姿态或伤害倍率的建模一旦变化，这个回合数就会变。
         Id = "WATCHER-STANCE-REGRESSION-LOCK"

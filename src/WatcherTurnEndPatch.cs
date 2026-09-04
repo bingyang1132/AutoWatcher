@@ -82,10 +82,6 @@ internal static class WatcherTurnEndPatch
                 sim.Simulator.Damage(enemy, omega, ValueProp.Unpowered, sim.Self);
         }
 
-        // 确立：只有在手牌整体保留生效时才降费，条件依赖 RetainHandPower 这类效果是否存在，
-        // 而那要读被 Harmony 改写过的监听器列表，镜像不到。
-        if (SV.PowerAmount<EstablishmentPower>(sim) > 0)
-            sim.Unmirrored("确立在整体保留生效时给手牌降费");
 
         // 悟命：把下回合要给的真言存进 Power 的私有字段，那不是可镜像的状态。
         if (SV.PowerAmount<EnlightenFatePower>(sim) > 0)
