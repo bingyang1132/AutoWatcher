@@ -19,7 +19,8 @@
     1. mods/ 里只留 CombatSolver、Watcher、SolverWatcherAdapter 三个。
        其他 gameplay mod（尤其 LotmMod）会让求解器停在第三方检查上，与观者无关。
     2. 改过 mod 之后先 Stop-Process -Name SlayTheSpire2，否则 harness 会复用旧进程，
-       测到的是旧的加载状态。本脚本开头会自动杀。
+       测到的是旧的加载状态。本脚本开头会自动杀，并且每条用例都用独立进程（-ExitOnComplete），
+       因为复用进程在切换敌人注入方式时会卡住。
 #>
 param(
     [string]$SolverRepo = "E:\Modding\SlayTheSpire2\CombatSolver",
@@ -46,7 +47,7 @@ $cases = @(
         Args = @(
             "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
             "-CardsJson", (Hand @("WATCHER_ERUPTION_P")),
-            "-ExpectedInitialActionCardId", "WATCHER_ERUPTION_P",
+            "-ExpectedInitialFirstActionCardId", "WATCHER_ERUPTION_P",
             "-ExpectedInitialUnmirroredCount", "0"
         )
     },
@@ -56,29 +57,31 @@ $cases = @(
         Args = @(
             "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
             "-CardsJson", (Hand @("WATCHER_VIGILANCE")),
-            "-ExpectedInitialActionCardId", "WATCHER_VIGILANCE",
-            "-ExpectedInitialActualBlockAtLeast", "8",
+            "-ExpectedInitialFirstActionCardId", "WATCHER_VIGILANCE",
+            "-ExpectedInitialMaxBlockAtLeast", "8",
             "-ExpectedInitialUnmirroredCount", "0"
         )
     },
     @{
         # 矩阵里最有区分度的一条，纯算术。
-        # 注意退出平静的 2 点能量是在结算爆发"之内"发生的，付不了爆发自己的费用，
-        # 所以必须先用奇迹垫一点，让爆发付得起，那 2 点才能去支撑第四个动作：
-        #   起手 3 点。奇迹 0 费给 1 点 -> 4 点。
-        #   警戒 2 费 -> 2 点，进入平静。
-        #   爆发 2 费 -> 0 点，结算中退出平静补 2 点 -> 2 点，进入愤怒。
-        #   打击 1 费 -> 1 点。共 4 个动作。
-        # 那 2 点没建模的话，打击付不起，只有 3 个动作。
-        # 其他出牌顺序都到不了 4 个动作：把打击或爆发提前都会让后面的 2 费牌付不起。
+        # 退出平静的 2 点能量是在结算爆发"之内"发生的，付不了爆发自己的费用，只能支撑
+        # 再往后的动作。所以把能量固定成 4 点，让"三个动作"成为唯一需要这 2 点的线路：
+        #   4 点。警戒 2 费 -> 2 点，8 格挡，进入平静。
+        #   爆发 2 费 -> 0 点，9 伤害，结算中退出平静补 2 点 -> 2 点，进入愤怒。
+        #   打击 1 费 -> 1 点，6x2 = 12 伤害。共 3 个动作、8 格挡、21 伤害。
+        # 那 2 点没建模的话，任何出牌顺序都只有 2 个动作：
+        #   警戒 爆发 -> 打击付不起（8 格挡 9 伤害）
+        #   爆发 打击 -> 警戒付不起（0 格挡 21 伤害）
+        # 三个动作的线路在格挡和伤害上都严格更优，所以求解器一定会选它，不会像上一版那样
+        # 因为奇迹带保留关键字而留牌。这里刻意不放奇迹，就是为了去掉那个自主选择。
         Id = "WATCHER-CALM-EXIT-ENERGY"
-        Why = "退出平静补 2 点能量。没有它只有 3 个动作，有它才有 4 个。"
+        Why = "退出平静补 2 点能量。固定 4 点能量下，没有它任何顺序都只有 2 个动作。"
         Args = @(
-            "-EnemyCurrentHp", "80", "-ClearPlayerPiles",
+            "-EnemyCurrentHp", "80", "-ClearPlayerPiles", "-InitialPlayerEnergy", "4",
             "-CardsJson", (Hand @(
-                "WATCHER_MIRACLE", "WATCHER_VIGILANCE",
-                "WATCHER_ERUPTION_P", "WATCHER_STRIKE_P")),
-            "-ExpectedInitialExecutableActionCountAtLeast", "4",
+                "WATCHER_VIGILANCE", "WATCHER_ERUPTION_P", "WATCHER_STRIKE_P")),
+            "-ExpectedInitialExecutableActionCountAtLeast", "3",
+            "-ExpectedInitialMaxBlockAtLeast", "8",
             "-ExpectedInitialUnmirroredCount", "0"
         )
     },
@@ -148,7 +151,7 @@ foreach ($case in $cases) {
         "-RitsuWorkshopRoot", $RitsuWorkshopRoot,
         "-StopAfterInitialSolverResultAssertion",
         "-TimeoutSeconds", "150",
-        "-KeepGameOpen"
+        "-ExitOnComplete"
     ) + $case.Args
     $output = & pwsh @argv 2>&1
     $ok = $LASTEXITCODE -eq 0
