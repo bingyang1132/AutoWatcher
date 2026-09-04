@@ -110,6 +110,19 @@ internal static class WatcherSimVerbs
         WatcherStanceVerbs.EnterDivinity(sim);
     }
 
+    /// <summary>施加回合结束死亡标记，并按原版记下施加时的回合数。</summary>
+    /// <remarks>
+    /// 那个 Power 靠一个私有字段记住自己是哪一回合被挂上的，下一个回合开始时才生效。字段在
+    /// 原版是 AfterApplied 里写的，而求解器不分发 AfterApplied，所以要在施加处补写。回合数
+    /// 两侧都取模拟的回合号，口径自洽。
+    /// </remarks>
+    public static void ApplyEndTurnDeath(WatcherSim sim)
+    {
+        Power(sim, typeof(EndTurnDeathPower), 1);
+        if (sim.Combat.GetMutablePower<EndTurnDeathPower>(sim.Self) is { } marker)
+            marker._appliedOnTurn = sim.Combat.GetPlayerTurnNumber(sim.Owner);
+    }
+
     /// <summary>对应 WatcherCombatHelper.ConsumeKnowFate。返回实际消耗掉的天命层数。</summary>
     /// <remarks>
     /// 两个细节按原版实现：尝试标记 KnowFateConsumptionAttemptedThisCard 在检查层数之前就置位，

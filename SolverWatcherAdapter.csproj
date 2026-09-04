@@ -33,6 +33,8 @@
     <!-- 求解器和游戏都要放开内部成员：适配层要注册进求解器的内部注册表。 -->
     <Publicize Include="sts2" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="CombatSolver" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false" />
+    <!-- 观者也要放开：有几个 Power 把只在钩子里维护的状态放在私有字段上，而那些钩子求解器不分发，只能在这里补写。 -->
+    <Publicize Include="Watcher" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false" />
   </ItemGroup>
 
   <ItemGroup>

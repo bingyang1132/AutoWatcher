@@ -89,7 +89,7 @@ internal static partial class WatcherCardMirrors
     {
         // 顺序要紧：先进神圣，再挂回合结束死亡标记。
         S.EnterDivinity(context);
-        V.Power(context, typeof(EndTurnDeathPower), 1);
+        WatcherSimVerbs.ApplyEndTurnDeath(WatcherSim.From(context));
     }
 
     /// <summary>打击次数等于可命中敌人数，全部打在同一个目标上。</summary>

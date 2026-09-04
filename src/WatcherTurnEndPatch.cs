@@ -102,6 +102,86 @@ internal static class WatcherTurnEndPatch
 }
 
 /// <summary>
+/// 玩家回合开始时观者 Power 效果的补丁。
+/// </summary>
+/// <remarks>
+/// 和回合结束那条同理：<c>AfterPlayerTurnStart</c> 不在求解器镜像的方法列表里，而求解器把
+/// 玩家回合开始的 Power 效果写成了一段按类型的硬编码 switch，没有注册点。
+///
+/// 这一批的分量不小：虔诚每回合给真言、战歌每回合造打击、收集每回合造升级过的奇迹、
+/// 沸腾之怒进愤怒并抽牌然后消失、预知每回合给天命。它们大多是观者的循环引擎，全漏掉的话
+/// 路线会系统性低估。
+/// </remarks>
+internal static class WatcherPowerTurnStartPatch
+{
+    public static MethodInfo ResolveTarget()
+        => AccessTools.Method(
+               typeof(TurnStartPowerSupport),
+               nameof(TurnStartPowerSupport.TriggerAfterPlayerTurnStart))
+           ?? throw new MissingMethodException(
+               nameof(TurnStartPowerSupport),
+               nameof(TurnStartPowerSupport.TriggerAfterPlayerTurnStart));
+
+    public static void Postfix(
+        bool __result,
+        CombatPredictionSimulator simulator,
+        SimulatedCombatState combat,
+        Player player)
+    {
+        if (__result)
+            return;
+        if (!simulator.State.GetCreature(player.Creature).IsAlive)
+            return;
+
+        WatcherSim sim = new(combat, simulator, simulator.State, simulator.History, player);
+
+        // 战歌：按层数往手里造打击。
+        if (SV.PowerAmount<BattleHymnPower>(sim) is > 0 and var hymn)
+            SV.AddCards<WatcherSmite>(sim, PileType.Hand, hymn);
+
+        // 收集：造一张升级过的奇迹进手牌，然后自减一层，减到零就消失。
+        if (SV.PowerAmount<CollectPower>(sim) > 0)
+        {
+            foreach (SimCardPileAddResult added in
+                     simulator.CreateAndAddGeneratedCardsToCombat<WatcherMiracle>(
+                         player, PileType.Hand, 1, player))
+            {
+                simulator.Upgrade(added.CardAdded);
+            }
+            if (combat.GetMutablePower<CollectPower>(player.Creature) is { Amount: > 0 } collect)
+                combat.SetPowerAmount(collect, collect.Amount - 1);
+        }
+
+        // 虔诚：按层数给真言，走真言动词所以满 10 转神圣也正确。
+        if (SV.PowerAmount<DevotionPower>(sim) is > 0 and var devotion)
+            SV.GainMantra(sim, devotion);
+
+        // 沸腾之怒：进愤怒、按层数抽牌、然后自己消失。
+        if (SV.PowerAmount<SimmeringFuryPower>(sim) is > 0 and var fury)
+        {
+            WatcherStanceVerbs.EnterWrath(sim);
+            SV.Draw(sim, fury);
+            if (combat.GetMutablePower<SimmeringFuryPower>(player.Creature) is { } live)
+                combat.SetPowerAmount(live, 0);
+        }
+
+        // 预知姿态：每回合给 2 层天命。
+        if (SV.PowerAmount<Foreseen>(sim) > 0)
+            SV.Power(sim, typeof(KnowFatePower), 2);
+
+        // 亵渎的回合结束死亡：不是挂上的那一回合就生效，造成足以致死的无视格挡伤害。
+        if (combat.GetPower<EndTurnDeathPower>(player.Creature) is { Amount: > 0 } marker
+            && marker._appliedOnTurn != combat.GetPlayerTurnNumber(player))
+        {
+            simulator.Damage(
+                player.Creature, 99999, ValueProp.Unblockable | ValueProp.Unpowered, null);
+            if (combat.GetMutablePower<EndTurnDeathPower>(player.Creature) is { } liveMarker)
+                combat.SetPowerAmount(liveMarker, 0);
+        }
+    }
+}
+
+/// <summary>
 /// 玩家回合开始时观者遗物效果的补丁。目前只有达玛茹。
 /// </summary>
 /// <remarks>
