@@ -171,10 +171,18 @@ internal static class WatcherSimVerbs
     /// 候选必须按抽牌堆的实际顺序给，下标 0 是牌堆顶。部署时求解器要拿这个顺序去原生选牌页面
     /// 上定位卡牌，顺序错了就会选错张。
     ///
+    /// 分支不是白开的。卡牌预视一回合最多几次，展开完整子集划得来；香料每次洗牌都触发，
+    /// 而能循环整个牌库的牌组一回合能洗十几次，那样每次洗牌都把搜索宽度乘一遍，会把出牌
+    /// 决策整个压过去——实测一局无限里预视分支 `75224` 条、节点展开只有 `15549` 条，单次搜索
+    /// 70 秒。所以按来源分：卡牌照常展开，遗物收成一条。
+    ///
     /// 连带效果照原版 OnScry 实现：涅槃按层数给不受力量影响的格挡，弃牌堆里的经纬回手。
     /// 这两样都在挑牌之前结算。
     /// </remarks>
-    public static void Scry(WatcherSim sim, int amount, string source)
+    /// <param name="maxBranches">
+    /// 给 1 表示按固定策略作答、不在搜索里展开分支。每次洗牌都触发的来源（香料）要这样用。
+    /// </param>
+    public static void Scry(WatcherSim sim, int amount, string source, int? maxBranches = null)
     {
         int effective = EffectiveScryAmount(sim, amount);
         if (effective <= 0)
@@ -204,6 +212,7 @@ internal static class WatcherSimVerbs
             source,
             sim.Owner,
             PileType.Draw,
-            looked);
+            looked,
+            maxBranches);
     }
 }

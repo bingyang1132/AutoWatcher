@@ -68,7 +68,7 @@ internal static class WatcherItemMirrors
             return;
         WatcherSim sim = WatcherSim.From(
             context.CombatState, context.Simulator, context.State, context.History, owner);
-        SV.Scry(sim, 3, relic.Id.Entry);
+        SV.Scry(sim, 3, relic.Id.Entry, maxBranches: 1);
     }
 
     /// <summary>斗篷扣：回合结束前按手牌数获得格挡。</summary>
