@@ -19,7 +19,13 @@ internal static class PinnedTargets
         "9b6d6b8806e37b07a83576fef766a07aa42fc642168fa2c3e58e148c6f377733";
 
     /// <summary>核对适配层时所针对的求解器版本。</summary>
-    public static readonly Version CombatSolverVersion = new(0, 29, 0, 0);
+    /// <remarks>
+    /// 2026-09-05 从 <c>0.29.0</c> 抬到 <c>0.30.0</c>。上游 <c>f63c57c..b04d3ec</c> 这 26 个提交里，
+    /// <c>src/</c> 只动了 <c>CombatBugReportExporter.cs</c> 和 <c>UnattendedTestRunner.cs</c>，
+    /// 适配层用到的镜像注册表、模拟状态和选择通道一行没改，所以这次是纯版本号跟进，
+    /// 不需要重新逐个动词核对。
+    /// </remarks>
+    public static readonly Version CombatSolverVersion = new(0, 30, 0, 0);
 
     public static string? TryComputeSha256(Assembly assembly)
     {
