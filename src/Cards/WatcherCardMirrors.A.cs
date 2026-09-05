@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using CombatSolver.Engine.Common.Mirrors;
@@ -20,9 +21,24 @@ namespace SolverWatcherAdapter;
 /// </remarks>
 internal static partial class WatcherCardMirrors
 {
-    private static decimal Var(CardModel card, string key) => card.DynamicVars[key].BaseValue;
+    /// <summary>读牌上的动态变量。键不存在时报出这张牌和它实际有哪些键。</summary>
+    /// <remarks>
+    /// 直接索引字典的话，键写错只会在结算到这张牌时抛一个不带上下文的 KeyNotFound，堆栈要翻到
+    /// 底才知道是哪张牌哪个键。实机就出过一次：易感的键是 PowerVar 单参数构造给的类型名
+    /// VulnerablePower，我按牌面显示名写成了 Vulnerable，结果整次搜索失败。
+    /// </remarks>
+    private static DynamicVar RequireVar(CardModel card, string key)
+    {
+        if (card.DynamicVars.TryGetValue(key, out DynamicVar? value))
+            return value;
+        throw new KeyNotFoundException(
+            $"观者镜像在 {card.Id.Entry} 上读不到动态变量 {key}。该牌实际有：" +
+            string.Join("、", card.DynamicVars.Select(pair => pair.Key)));
+    }
 
-    private static int VarInt(CardModel card, string key) => card.DynamicVars[key].IntValue;
+    private static decimal Var(CardModel card, string key) => RequireVar(card, key).BaseValue;
+
+    private static int VarInt(CardModel card, string key) => RequireVar(card, key).IntValue;
 
     public static int RegisterA(MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> r)
     {
@@ -171,8 +187,10 @@ internal static partial class WatcherCardMirrors
     {
         V.Attack(context);
         // 条件在伤害结算之后才判断，读的是同一主人打出的上一张牌。
+        // 易感的变量键是 PowerVar<VulnerablePower> 单参数构造给的，也就是 Power 的类型名，
+        // 不是牌面上显示的那个词。写成显示名会在结算时抛 KeyNotFound。
         if (V.PreviousPlayedCardType(context) == CardType.Skill)
-            V.PowerOnTarget(context, typeof(VulnerablePower), VarInt(card, "Vulnerable"));
+            V.PowerOnTarget(context, typeof(VulnerablePower), VarInt(card, "VulnerablePower"));
     }
 
     private static void CutThroughFate(WatcherCutThroughFate card, CardOnPlayMirrorContext context)

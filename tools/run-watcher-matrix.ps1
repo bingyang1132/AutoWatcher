@@ -189,6 +189,20 @@ $cases = @(
             "-ExpectedInitialUnmirroredCount", "0"
         )
     },    @{
+        # 实机报出来的第二个 bug 的回归锁。碎骨读一个 PowerVar 变量，而它的键是 Power 的
+        # 类型名 VulnerablePower，不是牌面显示的那个词。写错的时候这张牌一被打出来就抛
+        # KeyNotFound，整次搜索直接失败，界面显示"搜索动作回放失败"。
+        # 所以这条不需要断言数值：只要求解器能给出一条包含这张牌的路线，就说明修好了。
+        # 这里不断言未镜像项为 0——碎骨在路线首张时读不到上一张牌的类型，会按约定记一条风险，
+        # 而出牌顺序由求解器自己定，断言 0 会变成不确定的。
+        Id = "WATCHER-CRUSH-JOINTS-VAR-KEY"
+        Why = "碎骨的易感层数取自 PowerVar，键是类型名。写错时这张牌一打出来整次搜索就失败。"
+        Args = @(
+            "-EnemyCurrentHp", "80", "-ClearPlayerPiles",
+            "-CardsJson", (Hand @("WATCHER_DEFEND_P", "WATCHER_CRUSH_JOINTS")),
+            "-ExpectedInitialExecutableActionCountAtLeast", "2"
+        )
+    },    @{
         # 回归锁，不是算术判别。3 这个数是对已验证的构建实测出来的，
         # 不是推导出来的。姿态或伤害倍率的建模一旦变化，这个回合数就会变。
         Id = "WATCHER-STANCE-REGRESSION-LOCK"
