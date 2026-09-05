@@ -20,9 +20,14 @@ namespace SolverWatcherAdapter;
 /// <c>WATCHER_SANDS_OF_TIME</c> 的费用预测 4、实际 3。也就是说这个缺口不是理论上的，
 /// 它会直接让求解器的续算作废、反复重新搜索。
 ///
-/// 求解器把回合末的弃牌与保留写在 <c>CorePowerSupport.FlushPlayerHandAtTurnEnd</c> 里，
-/// 跑完之后还留在手上的正好就是被保留的那些牌，所以补在它后面语义上等价于原版遍历
-/// <c>ShouldRetainThisTurn</c>。
+/// 求解器把回合末的弃牌与保留写在 <c>CorePowerSupport.FlushPlayerHandAtTurnEnd</c> 里。
+/// 取"被保留的牌"用的是前置补丁，在冲洗之前按 <c>ShouldRetainThisTurn</c> 记一份名单，
+/// 和原版 <c>WatcherRetainCompat.AfterFlush</c> 的判据一致。
+///
+/// 不能改用"冲洗完还留在手上的牌"，那样有两处会错：
+/// 一是求解器的冲洗前面有一道 <c>PersistentRelicSupport.ShouldFlush</c>，响铃三角这类
+/// 效果会让整只手一张都不弃，那时留在手上的并不都是被保留的；
+/// 二是同一个方法里紧接着会跑 <c>EndOfTurnCleanup</c>，冥想给的单回合保留在那之后就读不到了。
 /// </remarks>
 internal static class WatcherRetainPatch
 {
@@ -34,23 +39,32 @@ internal static class WatcherRetainPatch
                nameof(CorePowerSupport),
                nameof(CorePowerSupport.FlushPlayerHandAtTurnEnd));
 
-    public static void Postfix(
+    /// <summary>冲洗之前先记下哪些牌会被保留。</summary>
+    public static void Prefix(
         CombatPredictionSimulator simulator,
-        SimulatedCombatState combat,
-        Player player)
+        Player player,
+        out PredictedCard[] __state)
     {
-        SimPlayerCombatState playerState = simulator.State.GetPlayerCombatState(player);
-        PredictedCard[] retained = playerState.Hand.Cards.ToArray();
-        if (retained.Length == 0)
+        __state = simulator.State.GetPlayerCombatState(player).Hand.Cards
+            .Where(card => card.Preview.ShouldRetainThisTurn)
+            .ToArray();
+    }
+
+    public static void Postfix(
+        SimulatedCombatState combat,
+        Player player,
+        PredictedCard[] __state)
+    {
+        if (__state.Length == 0)
             return;
 
-        foreach (PredictedCard card in retained)
+        foreach (PredictedCard card in __state)
             ApplyRetainGrowth(card);
 
         // 确立：被保留的牌本回合再降费，降幅等于层数。原版把它放在同一个保留流程里。
         if (combat.GetAmount<EstablishmentPower>(player.Creature) is > 0 and var establishment)
         {
-            foreach (PredictedCard card in retained)
+            foreach (PredictedCard card in __state)
                 card.MutablePreview.EnergyCost.AddThisCombat(-establishment, reduceOnly: true);
         }
     }

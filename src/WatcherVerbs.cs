@@ -233,16 +233,33 @@ internal static class WatcherVerbs
     public static void Scry(CardOnPlayMirrorContext context, int amount)
         => WatcherSimVerbs.Scry(WatcherSim.From(context), amount, context.PreviewCard.Id.Entry);
 
-    /// <summary>额外回合。只施加 Power，不代替求解器结束回合。</summary>
+    /// <summary>结算中强制结束本回合。</summary>
     /// <remarks>
-    /// 原版 TakeExtraTurn 施加 WatcherExtraTurnPower 之后会强制结束回合，但结束回合在求解器
-    /// 里是它自己的一个动作、由搜索决定，卡牌镜像不该越过它去改回合流程。所以这里只施加 Power
-    /// 并记一条风险。
+    /// 求解器对这件事有一等支持：<c>SimulatedCombatState.RequestPlayerTurnEnd</c> 打一个标记，
+    /// 搜索在这张牌结算完之后读到标记就立刻 <c>AdvanceRound</c>，并把这个动作标成
+    /// <c>EndsPlayerTurn</c>。原版虚空形态走的就是这条路
+    /// （<c>CardOnPlaySupport</c> 里 <c>case VoidForm</c> 之后紧跟 <c>combat.RequestPlayerTurnEnd()</c>），
+    /// 所以镜像调它并不是越权，而是照原版的用法。
+    ///
+    /// 这一条以前只记风险不真结束回合，后果是实机事故：求解器给出的路线是
+    /// 火焰纹 → 渎神 → 结末 → 打击，它以为打击能在同一回合杀死最后一个敌人、于是渎神的
+    /// 回合结束死亡永远不会到来。实际结末打完回合就结束了，打击根本没机会打出，下一回合
+    /// 开始时玩家被渎神杀死。风险标记只是显示上的红字，不会把不可能的续接从搜索里去掉，
+    /// 所以这种「后面还能接牌」的错误必须真的建模，光记风险不够。
+    /// </remarks>
+    public static void ForceEndTurn(CardOnPlayMirrorContext context)
+        => Combat(context).RequestPlayerTurnEnd();
+
+    /// <summary>额外回合：施加 Power 并强制结束当前回合。</summary>
+    /// <remarks>
+    /// 顺序照原版 <c>WatcherCombatHelper.TakeExtraTurn</c>：先施加 <c>WatcherExtraTurnPower</c>，
+    /// 再结束回合。求解器在回合推进里读这个 Power 得靠
+    /// <see cref="WatcherExtraTurnPatch" /> 那两条补丁，因为它判断额外回合的地方是硬编码的。
     /// </remarks>
     public static void TakeExtraTurn(CardOnPlayMirrorContext context)
     {
         Power(context, typeof(WatcherExtraTurnPower), 1);
-        Unmirrored(context, $"{context.PreviewCard.Id.Entry} 打出后会强制结束当前回合");
+        ForceEndTurn(context);
     }
 
     // ---------- 诚实降级 ----------

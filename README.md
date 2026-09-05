@@ -56,6 +56,16 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 自动认得它，所以不需要额外的预测状态，`Wrath` 和 `Divinity` 的伤害倍率也自动正确——只读钩子
 求解器本来就会回落到 mod 自己的实现。
 
+**结算中强制结束回合**（结末、冥想、跳跃）走求解器自己的
+`SimulatedCombatState.RequestPlayerTurnEnd`，和原版虚空形态用的是同一条路：搜索在这张牌结算完
+之后立刻推进回合，并把这个动作标成结束回合。这一条必须真的建模，只记风险不够——风险只是显示上
+的红字，不会把"结末后面还能接牌"这种不可能的续接从搜索里去掉。实机就出过事故：求解器给的路线
+是结末之后再补一张打击收掉最后一个敌人，于是认为渎神的回合结束死亡永远不会到来，实际打击根本
+没机会打出，下一回合开始玩家被渎神杀死。
+
+跳跃给的额外回合也建了模。求解器判断"能不能再来一个回合"的地方是硬编码的，只看龙涎香和帕尔
+之眼，所以由 `src/WatcherExtraTurnPatch.cs` 补上观者的来源和它的消耗。
+
 ### 显式记为未镜像的部分
 
 下表里的牌用 mod 的牌 ID 指称，不用中文名——观者的官方中文名要从游戏本地化里核对，这份文档还没核对过。
@@ -69,8 +79,6 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 | `WATCHER_DRAW_TALISMAN` 的批量临时附魔 | 需要附魔系统的建模 |
 | `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 求解器的生成接口按牌类型创建规范实例，不接受实例级负载 |
 | `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 那个 Power 自己维护一个实例表，N 张牌是 N 个独立成长的实例，不等于一个数量为 N 的实例 |
-| `WATCHER_PERSEVERANCE` / `WATCHER_SANDS_OF_TIME` / `WATCHER_WINDMILL_STRIKE` 被保留时的数值增长 | 发生在保留钩子里。根状态克隆时已带上之前累积的结果，缺的只是路线内部发生的保留 |
-| `WATCHER_CONCLUDE` / `WATCHER_MEDITATE` / `WATCHER_VAULT` 打出后强制结束回合 | 结束回合在求解器里是它自己的动作、由搜索决定，卡牌镜像不该越过它改回合流程 |
 | `WATCHER_PRESSURE_POINTS` 的无视格挡伤害 | 带 Unblockable 和 Unpowered，动词层里没有对应形式。标记本身叠对了 |
 | `WATCHER_LESSON_LEARNED` 的永久牌组升级 | 超出单场战斗模拟的范围 |
 | `WATCHER_BRILLIANCE` 的伤害 | 取自 `WatcherStatePower` 的私有计数器，而该计数不在状态指纹里。只在计数不为零时才记风险 |
@@ -137,9 +145,13 @@ SolverWatcherAdapter
 | `WATCHER-WREATH-VIGOR-DAMAGE` | 11 血敌人第一回合击杀（打击 6 + 激励 5；没施加 Power 只有 6） | 通过 |
 | `WATCHER-SANDS-RETAIN-COST` | 手上只有时之沙时第二回合结束（4 费付不起、保留降 1 费后才付得起） | 通过 |
 | `WATCHER-STANCE-REGRESSION-LOCK` | 100 血投影三回合结束，终局敌方总生命 0 | 通过 |
+| `WATCHER-CRUSH-JOINTS-VAR-KEY` | 碎骨能打出且不让搜索失败（易感层数的变量键取的是 Power 类型名） | 通过 |
+| `WATCHER-CONCLUDE-ENDS-TURN` | 两张结末一张打击、30 血敌人，第二回合才结束（结末打完回合就结束，第二张接不上） | 通过 |
+| `WATCHER-BLASPHEMY-NO-SUICIDE` | 一副赢不了的牌里，渎神一次都不打 | 通过 |
+| `WATCHER-SANDS-NO-DRAW-TURN-DISCOUNT` | 时之沙抽上来那回合仍是 4 费，3 点能量下先打三张打击+ | 通过 |
 
-前十条都是算术判别：镜像算错，数值就对不上。第十条是实测出来的回归锁。
-十一条都带 `-ExpectedInitialUnmirroredCount 0`，所以**求解器在这些路线上不报告任何未镜像
+大多数是算术判别：镜像算错，数值就对不上。后四条是实机报出来的问题的回归锁。
+每条都带 `-ExpectedInitialUnmirroredCount 0`，所以**求解器在这些路线上不报告任何未镜像
 效果**——验收标准的第二条成立。
 
 其中真言那条一开始没过，但失败的是未镜像项而不是动作数：转换和补能量本来就对，只是
@@ -152,14 +164,32 @@ SolverWatcherAdapter
 ```bash
 pwsh -NoProfile -File tools/run-watcher-matrix.ps1
 ```
+
+全量要跑好几分钟，一定放后台。脚本每跑完一条就往 `.matrix-progress.txt` 写一行带时间戳的结果，
+用它跟进度——PowerShell 的标准输出要等进程退出才刷出来，后台看输出文件会一直是空的。
+跑之前的注意事项和几种"看着卡死"的判别，见工作区的 `docs/headless-harness-playbook.md`。
 ### 实机报告过的偏差
 
-打旧日雕像时出现过数次计划外重算。日志里 `SEARCH_REUSE_MISS` 给出的四处差异全部归结为两个
-缺口，都已修复：生成的洞察没继承升级（三处）、时之沙被保留后没降费（一处）。同一份日志里
-观者相关的未镜像项也只有明察那一条，正是同一个升级问题。
+**旧日雕像战的计划外重算。** 日志里 `SEARCH_REUSE_MISS` 给出的四处差异全部归结为两个缺口，
+都已修复：生成的洞察没继承升级（三处）、时之沙被保留后没降费（一处）。同一份日志里观者相关的
+未镜像项也只有明察那一条，正是同一个升级问题。剩下的唯一一条 `SHRINK_POWER / AfterDeath`
+是原版求解器的已知缺口且标了 `compensated=True`，与适配层无关。
 
-剩下的唯一一条 `SHRINK_POWER / AfterDeath` 是原版求解器的已知缺口且标了 `compensated=True`，
-与适配层无关。
+**碎骨让整次搜索失败。** 易感层数的变量键是 `PowerVar<T>` 单参数构造按 `typeof(T).Name` 生成的，
+也就是 `VulnerablePower`，不是牌面上显示的那个词。已修，并且把变量读取改成读不到时报出是哪张牌、
+该牌实际有哪些键。
+
+**求解器自动打出渎神把自己杀了。** 根因不在渎神，在结末：结末打出后本回合就结束，而当时那一条
+只记了风险、没有真的结束回合。于是求解器给的路线是「火焰纹 → 渎神 → 结末 → 打击」，它以为最后
+那张打击能在同一回合收掉最后一个敌人、渎神的回合结束死亡永远不会到来。实际结末打完回合就结束，
+打击没机会打出，下一回合开始时玩家被渎神杀死。
+
+这一条的教训是：**风险标记只是显示上的红字，不会把不可能的续接从搜索里去掉。**「这张牌之后还能
+不能接牌」这类会改变可行动作集合的效果，必须真的建模。修法是走求解器自己的
+`RequestPlayerTurnEnd`，和原版虚空形态一样。顺带把跳跃的额外回合也建了模。
+
+死亡本身求解器计价没有问题：死亡是 -1e12 的分数、节点直接终止，所以只要回合结束死亡真的建模了，
+求解器绝不会主动送死。`WATCHER-BLASPHEMY-NO-SUICIDE` 用一副赢不了的牌锁住这一点。
 
 ## 强度验收标准
 
@@ -183,5 +213,7 @@ cp "$APPDATA/SlayTheSpire2/steam/<steamid>/settings.save" \
    "$LOCALAPPDATA/CombatSolver/headless-runtime/Roaming/SlayTheSpire2/default/1/settings.save"
 ```
 
-另外 harness 会复用上一次的游戏进程（`reused_process=True`）。改了 mod 之后必须先
-`Stop-Process -Name SlayTheSpire2`，否则测的还是旧的加载状态。
+另外 harness 会复用上一次的游戏进程（`reused_process=True`），而它判断能不能复用只比对
+**CombatSolver 自己**的 DLL 和清单哈希，认不出适配层改没改。所以改了 mod 之后必须先
+`Stop-Process -Name SlayTheSpire2`，否则测的还是旧的加载状态。矩阵脚本开头会自动杀一次，
+每条用例也都用独立进程。

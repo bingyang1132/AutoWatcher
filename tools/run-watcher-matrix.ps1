@@ -27,12 +27,27 @@ param(
     [string]$GameRoot = "D:\Sponsored\Steam\steamapps\common\Slay the Spire 2",
     [string]$RitsuWorkshopRoot = "D:\Sponsored\Steam\steamapps\workshop\content\2868840\3747602295",
     [string]$Only = "",
+    [string]$ProgressPath = "",
     [switch]$NoRestart
 )
 
 $ErrorActionPreference = "Stop"
 $runner = Join-Path $SolverRepo "tools\run-unattended-test.ps1"
 if (-not (Test-Path -LiteralPath $runner)) { throw "找不到 harness：$runner" }
+
+# 整个矩阵要跑好几分钟，一定是放后台跑的。而 PowerShell 的标准输出要等进程退出才刷出来，
+# 后台看到的输出文件在跑完之前一直是 0 字节，看着像卡死。所以每跑完一条就往进度文件写一行，
+# 让外面随时能知道跑到哪了、还动不动。
+if (-not $ProgressPath) {
+    $ProgressPath = Join-Path $PSScriptRoot "..\.matrix-progress.txt"
+}
+$ProgressPath = [IO.Path]::GetFullPath($ProgressPath)
+function Write-MatrixProgress([string]$line) {
+    $stamped = "{0} {1}" -f (Get-Date -Format "HH:mm:ss"), $line
+    Add-Content -LiteralPath $ProgressPath -Value $stamped -Encoding UTF8
+    Write-Host $stamped
+}
+Set-Content -LiteralPath $ProgressPath -Value "" -Encoding UTF8
 
 function Hand([string[]]$cardIds) {
     ($cardIds | Group-Object | ForEach-Object {
@@ -214,10 +229,63 @@ $cases = @(
             "-ExpectedInitialFinalEnemyHpAtMost", "0",
             "-ExpectedInitialUnmirroredCount", "0"
         )
+    },
+    @{
+        # 实机事故的回归锁。原来的路线是 火焰纹 -> 渎神 -> 结末 -> 打击：求解器以为最后那张
+        # 打击能在同一回合杀死最后一个敌人，于是渎神的回合结束死亡永远不会到来。实际结末打完
+        # 回合就结束了，打击没机会打出，下一回合开始时玩家被渎神杀死。
+        #
+        # 敌人正好 30 血，手里两张结末一张打击、3 点能量，牌堆里没别的。
+        #   正确：第一回合 打击 6 + 结末 12 = 18，结末打完回合就结束，第二张结末打不出来；
+        #         敌人剩 12，第二回合重新抽回这三张再打 18，第二回合死。
+        #   有 bug：打击 6 + 结末 12 + 结末 12 = 30，第一回合就死。
+        # 所以用结束回合数判别，1 和 2 不会混。
+        Id = "WATCHER-CONCLUDE-ENDS-TURN"
+        Why = "结末打出后本回合就结束，后面接不了牌。渎神自杀事故的根因。"
+        Args = @(
+            "-EnemyCurrentHp", "30", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", (Hand @("WATCHER_CONCLUDE", "WATCHER_CONCLUDE", "WATCHER_STRIKE_P")),
+            "-ExpectedInitialCombatEndedTurn", "2",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 渎神只有在"这回合就能赢"的时候才该打，因为它下回合开始就要人命。
+        # 所以这里给一副赢不了的牌：整副只有渎神和两张防御，一点伤害都没有。
+        # 这时打渎神就是纯自杀，求解器必须一次都不打它。
+        #
+        # 注意不要用"敌人血很多"来构造赢不了：harness 的血量会被上限截断，敌人照样能被打死，
+        # 而在能打死的那一回合打渎神其实是对的（神圣的伤害倍率白拿，死亡永远不会到来）。
+        # 第一版用了 200 血，结果求解器在致命回合打了渎神并且赢了——那是正确下法，不是 bug。
+        Id = "WATCHER-BLASPHEMY-NO-SUICIDE"
+        Why = "赢不了的时候不能打渎神。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", (Hand @("WATCHER_BLASPHEMY", "WATCHER_DEFEND_P", "WATCHER_DEFEND_P")),
+            "-ExpectedInitialAbsentActionCardId", "WATCHER_BLASPHEMY",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 时之沙是抽上来那回合还要 4 费，只有在手上过了一个回合末（被保留）才降到 3。
+        #   3 点能量、手里一张时之沙加三张打击+。
+        #   正确：时之沙 4 费打不出，三张打击+ 各 1 费共 27 伤害。
+        #   减错费：时之沙 3 费一张打完，20 伤害，能量清空。
+        # 27 比 20 高，所以只有减费没被提前应用，第一个动作才会是打击+。
+        Id = "WATCHER-SANDS-NO-DRAW-TURN-DISCOUNT"
+        Why = "时之沙抽上来那回合不降费，要在手上过一个回合末才降。"
+        Args = @(
+            "-EnemyCurrentHp", "200", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", '[{"cardId":"WATCHER_SANDS_OF_TIME","pile":"Hand","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Hand","count":3,"upgradeLevels":1}]',
+            "-ExpectedInitialFirstActionCardId", "WATCHER_STRIKE_P",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
     }
 )
 
-if ($Only) { $cases = $cases | Where-Object { $_.Id -eq $Only } }
+# 要用 @() 包住。只筛出一条时 PowerShell 会把数组拆成单个哈希表，
+# 那时 .Count 数的是哈希表的键个数，进度里就会报出"共 3 条"这种假数。
+if ($Only) { $cases = @($cases | Where-Object { $_.Id -eq $Only }) }
 if (-not $cases) { throw "没有匹配的用例：$Only" }
 
 if (-not $NoRestart) {
@@ -226,7 +294,10 @@ if (-not $NoRestart) {
 }
 
 $results = @()
+Write-MatrixProgress ("开始 共 {0} 条 进度文件 {1}" -f $cases.Count, $ProgressPath)
+$index = 0
 foreach ($case in $cases) {
+    $index++
     Write-Host ""
     Write-Host "=== $($case.Id)" -ForegroundColor Cyan
     Write-Host "    $($case.Why)"
@@ -248,12 +319,12 @@ foreach ($case in $cases) {
             ForEach-Object { Write-Host "    $($_.Line.Trim())" -ForegroundColor DarkYellow }
     }
     $results += [pscustomobject]@{ Case = $case.Id; Passed = $ok }
-    Write-Host ("    -> " + ($ok ? "通过" : "未通过")) -ForegroundColor ($ok ? "Green" : "Red")
+    Write-MatrixProgress ("[{0}/{1}] {2} {3}" -f $index, $cases.Count, $case.Id, ($ok ? "通过" : "未通过"))
 }
 
 Write-Host ""
 Write-Host "=== 汇总" -ForegroundColor Cyan
 $results | Format-Table -AutoSize
 $failed = ($results | Where-Object { -not $_.Passed }).Count
-Write-Host ("通过 {0}/{1}" -f ($results.Count - $failed), $results.Count)
+Write-MatrixProgress ("结束 通过 {0}/{1}" -f ($results.Count - $failed), $results.Count)
 exit ($failed -gt 0 ? 1 : 0)

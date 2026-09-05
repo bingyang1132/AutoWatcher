@@ -148,7 +148,7 @@ internal static partial class WatcherCardMirrors
         V.PlayerChoice(context, $"{card.Id.Entry} 从弃牌堆里选 {VarInt(card, "MagicNumber")} 张回手并保留");
         S.EnterCalm(context);
         if (context.CardPlay.IsLastInSeries)
-            V.Unmirrored(context, $"{card.Id.Entry} 打出后会强制结束当前回合");
+            V.ForceEndTurn(context);
     }
 
     private static void MentalFortress(WatcherMentalFortress card, CardOnPlayMirrorContext context)

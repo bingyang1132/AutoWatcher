@@ -2,3 +2,4 @@ bin/
 obj/
 .godot/
 local.props
+.matrix-progress.txt

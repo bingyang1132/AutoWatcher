@@ -155,11 +155,12 @@ internal static partial class WatcherCardMirrors
             V.Power(context, typeof(CollectPower), amount);
     }
 
+    /// <summary>群体攻击，然后强制结束回合。连打的中间几次不结束，只有最后一次结束。</summary>
     private static void Conclude(WatcherConclude card, CardOnPlayMirrorContext context)
     {
         V.AttackAllEnemies(context);
         if (context.CardPlay.IsLastInSeries)
-            V.Unmirrored(context, $"{card.Id.Entry} 打出后会强制结束当前回合");
+            V.ForceEndTurn(context);
     }
 
     /// <summary>X 费：生成一张涤罪者，其打击次数等于实付能量。</summary>
