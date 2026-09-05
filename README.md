@@ -101,8 +101,7 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 
 | 内容 | 原因 |
 |---|---|
-| `WATCHER_CUT_THROUGH_FATE` / `WATCHER_JUST_LUCKY` / `WATCHER_THIRD_EYE` 的预视丢牌选择 | 挑哪几张丢是搜索分支问题，要在 beam 上再开一层组合分支。连带效果（涅槃格挡、经纬回手）已实现，按"一张都不丢"建模，那是玩家一定做得出的选择，所以路线仍可执行 |
-| `WATCHER_OMNISCIENCE` / `WATCHER_FOREIGN_INFLUENCE` / `WATCHER_MEDITATE` / `WATCHER_WISH_P` 的选牌 | 同上 |
+| `WATCHER_OMNISCIENCE` / `WATCHER_FOREIGN_INFLUENCE` / `WATCHER_MEDITATE` / `WATCHER_WISH_P` 的选牌 | 挑哪一张是搜索分支问题，求解器的选择规格按原版卡牌类型写死，第三方登记不进去 |
 | `WATCHER_DRAW_TALISMAN` 的批量临时附魔 | 需要附魔系统的建模 |
 | `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 求解器的生成接口按牌类型创建规范实例，不接受实例级负载 |
 | `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 那个 Power 自己维护一个实例表，N 张牌是 N 个独立成长的实例，不等于一个数量为 N 的实例 |
@@ -138,9 +137,14 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 三条都在加载时解析目标方法，解析不到就抛异常让整个适配层不注册——宁可明确不可用，也不要
 装着装着少了一半回合效果。
 
-**仍未覆盖**：预视和选牌的搜索分支；以及一批走 Harmony postfix 或求解器不分发的钩子——
+**仍未覆盖**：选牌的搜索分支（预视已经接上求解器的选择分支，见下）；以及一批走 Harmony postfix 或求解器不分发的钩子——
 下回合开始的深思沉眠与预测移动、抽牌前的保留结算与预知预视、保留时三张牌的数值增长、
 预视弃牌触发的两张不可打出牌、能量重置时的神性形态与能量下降。详见 `docs/PLAN.md`。
+预视挑哪几张丢，现在由求解器自己搜。它走求解器的 `ResolvePileDiscardChoice`：候选是抽牌堆顶
+那几张（张数已过金瞳和守视），下界 0 上界全选，于是"丢掉"和"留着"都是正常的世界线分支，
+排序和分支上限沿用求解器现成的那套。部署时也照计划应答原生选牌页面，不再每次预视都触发重算。
+夹具 `WATCHER-SCRY-DISCARD-BRANCH`：天眼配四张打击在抽牌堆，`choice_branches=4`，红字 0 条。
+
 ## 测试环境要求
 
 **必须收窄 mod 集。** 你装的 LotmMod 会让求解器停在同一道门上

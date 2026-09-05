@@ -162,18 +162,17 @@ internal static class WatcherSimVerbs
         return amount;
     }
 
-    /// <summary>预视。只镜像它的连带效果，不镜像玩家挑哪几张丢掉。</summary>
+    /// <summary>预视：看牌堆顶的几张，挑任意张丢掉。</summary>
     /// <remarks>
-    /// 挑牌是搜索分支问题而不是镜像问题：要在 beam 上再开一层组合分支。这里按一张都不丢建模，
-    /// 因为那是玩家一定可以做出的选择，所以路线仍然可执行；同时记一条选择风险，让求解器明确
-    /// 说出这条路线没有探索丢牌的可能性，而不是假装探索过了。
+    /// 挑哪几张交给求解器自己搜。求解器把它登记成一次 0..N 的弃牌选择，候选就是抽牌堆顶那
+    /// 几张，于是"丢掉"和"留着"都变成正常的世界线分支，由后面的模拟自己分出高下——预视的
+    /// 价值本来就在这里：把垃圾牌推进弃牌堆，让下一圈抽到的都是好牌。
     ///
-    /// 求解器登记不了第三方的选择规格（<c>CardChoiceSupport.GetSpec</c> 是按原版卡牌类型写死的
-    /// switch），所以预视在实机上一定是计划外选择。求解器 0.29.0 起会把这类最低选择数为 0 的
-    /// 页面按空选确认掉再重算，正好和这里的建模一致；在那之前页面会留在屏幕上把全自动卡死。
-    /// 代价是每次预视都要重算一次。
+    /// 候选必须按抽牌堆的实际顺序给，下标 0 是牌堆顶。部署时求解器要拿这个顺序去原生选牌页面
+    /// 上定位卡牌，顺序错了就会选错张。
     ///
     /// 连带效果照原版 OnScry 实现：涅槃按层数给不受力量影响的格挡，弃牌堆里的经纬回手。
+    /// 这两样都在挑牌之前结算。
     /// </remarks>
     public static void Scry(WatcherSim sim, int amount, string source)
     {
@@ -190,6 +189,21 @@ internal static class WatcherSimVerbs
         if (weaves.Length > 0)
             sim.Simulator.AddToPile(weaves, PileType.Hand);
 
-        sim.PlayerChoice($"{source} 预视 {effective} 张后丢弃哪几张");
+        PredictedCard[] looked = sim.OwnerState.DrawPile.Cards.Take(effective).ToArray();
+        if (looked.Length == 0)
+            return;
+
+        if (sim.Combat is not ICombatPredictionChoiceSink choices)
+        {
+            sim.PlayerChoice($"{source} 预视 {looked.Length} 张后丢弃哪几张");
+            return;
+        }
+
+        _ = choices.ResolvePileDiscardChoice(
+            sim.Simulator,
+            source,
+            sim.Owner,
+            PileType.Draw,
+            looked);
     }
 }

@@ -85,6 +85,18 @@ $cases = @(
         )
     },
     @{
+        Id = "WATCHER-SCRY-DISCARD-BRANCH"
+        Tags = @("cards", "draw")
+        Why = "天眼的预视要开出真正的搜索分支：牌堆顶三张里挑哪几张丢，由求解器自己搜，不再记成未建模选择。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
+            "-CardsJson", '[{"cardId":"WATCHER_THIRD_EYE","pile":"Hand","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Draw","count":4}]',
+            "-ExpectedInitialFirstActionCardId", "WATCHER_THIRD_EYE",
+            "-ExpectedInitialChoiceBranchesEvaluatedAtLeast", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
         Id = "WATCHER-VIGILANCE-BLOCK"
         Tags = @("smoke", "stance")
         Why = "警戒给 8 点格挡。数值错了这条就过不去。"
