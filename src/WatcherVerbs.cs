@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
@@ -154,23 +155,41 @@ internal static class WatcherVerbs
     /// 排除当前这张。
     /// </summary>
     /// <remarks>
-    /// 原版读的是 CombatManager 的全局打牌历史，这里只能读模拟历史。两者的差别在于：搜索是从
-    /// 当前状态起算的，所以路线里的第一张牌在模拟历史里没有前一张，而实际对局中这一回合可能
-    /// 已经打过牌了。这种情况下返回 null 并记一条风险——宁可少报这个加成，也不要凭空假设一个
-    /// 类型。不从镜像里读 CombatManager，因为镜像跑在后台线程上，读实时状态是求解器明确禁止的。
+    /// 原版读的是 <c>CombatManager.Instance.History.CardPlaysStarted</c>，那是**整场战斗**的打牌
+    /// 历史，不是本回合的。所以上一张牌是跨回合的：一个回合的第一张牌看到的是上一回合最后
+    /// 打出的那张。
+    ///
+    /// 先读模拟历史；路线里的第一张牌在模拟历史里没有前一张，这时回落到求解器的根历史快照
+    /// <c>SimulatedCombatState._rootHistory.CardPlaysStarted</c>——那是主线程在搜索开始时抓下来的
+    /// 实机打牌历史，正是为这种查询准备的，读它不违反"后台不读实时状态"。
+    ///
+    /// 这一条实机报出过偏差：粉碎关节+ 作为第 4 回合的第一张牌打出，上一回合最后打的是防御
+    /// （技能），实机因此给了目标易伤，而镜像当时按"看不到前一张"处理、没给易伤，于是模拟和
+    /// 实机的敌人状态从那一刻起就不一致。
+    ///
+    /// 两处都查不到才返回 null 并记风险——那意味着这一场还没有打出过任何别的牌。
     /// </remarks>
     public static CardType? PreviousPlayedCardType(CardOnPlayMirrorContext context)
     {
         Player owner = Owner(context);
         CardModel self = context.PreviewCard;
-        CombatPredictionCardPlayStartedEntry? previous = context.History
+        CombatPredictionCardPlayStartedEntry? simulated = context.History
             .OfType<CombatPredictionCardPlayStartedEntry>()
             .LastOrDefault(entry =>
                 ReferenceEquals(entry.CardPlay.Card.Owner, owner)
                 && !ReferenceEquals(entry.CardPlay.Card, self));
-        if (previous is not null)
-            return previous.CardPlay.Card.Type;
-        Unmirrored(context, $"{self.Id.Entry} 的上一张牌类型在搜索起点之前，模拟历史里看不到");
+        if (simulated is not null)
+            return simulated.CardPlay.Card.Type;
+
+        CardModel original = context.Card.Original;
+        CardPlayStartedEntry? live = Combat(context)._rootHistory.CardPlaysStarted
+            .LastOrDefault(entry =>
+                ReferenceEquals(entry.CardPlay.Card.Owner, owner)
+                && !ReferenceEquals(entry.CardPlay.Card, original));
+        if (live is not null)
+            return live.CardPlay.Card.Type;
+
+        Unmirrored(context, $"{self.Id.Entry} 之前这一场没有打出过别的牌，取不到上一张牌类型");
         return null;
     }
 
