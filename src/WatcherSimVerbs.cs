@@ -168,6 +168,11 @@ internal static class WatcherSimVerbs
     /// 因为那是玩家一定可以做出的选择，所以路线仍然可执行；同时记一条选择风险，让求解器明确
     /// 说出这条路线没有探索丢牌的可能性，而不是假装探索过了。
     ///
+    /// 求解器登记不了第三方的选择规格（<c>CardChoiceSupport.GetSpec</c> 是按原版卡牌类型写死的
+    /// switch），所以预视在实机上一定是计划外选择。求解器 0.29.0 起会把这类最低选择数为 0 的
+    /// 页面按空选确认掉再重算，正好和这里的建模一致；在那之前页面会留在屏幕上把全自动卡死。
+    /// 代价是每次预视都要重算一次。
+    ///
     /// 连带效果照原版 OnScry 实现：涅槃按层数给不受力量影响的格挡，弃牌堆里的经纬回手。
     /// </remarks>
     public static void Scry(WatcherSim sim, int amount, string source)
