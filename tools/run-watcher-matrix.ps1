@@ -280,6 +280,36 @@ $cases = @(
             "-ExpectedInitialFirstActionCardId", "WATCHER_STRIKE_P",
             "-ExpectedInitialUnmirroredCount", "0"
         )
+    },
+    @{
+        # 观者的红蓝无限。整副只有内心平静和暴怒+，两张都是 1 费，都不消耗。
+        #   猛虎下山 1 费，之后每次进入愤怒抽 2 张。
+        #   内心平静 1 费进平静（不在平静里就是进平静）。
+        #   暴怒+ 1 费打伤害并进愤怒，退出平静补 2 点能量，然后凌波微步抽 2 张。
+        # 每轮净耗能量 0，抽回来的正好是这两张，所以能一直打下去。
+        #
+        # 关键在抽牌的时机：抽必须发生在暴怒进弃牌堆之后。要是在结算当中就抽，
+        # 暴怒还在出牌堆里，抽牌堆见底重洗时抽不到它，循环就断了。
+        # 断了的话第一回合最多打三张牌，敌人打不死。
+        Id = "WATCHER-RUSHDOWN-INFINITE"
+        Why = "凌波微步的进入愤怒抽牌撑起红蓝无限，第一回合就该打完。"
+        Args = @(
+            "-EnemyCurrentHp", "200", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", '[{"cardId":"WATCHER_RUSHDOWN","pile":"Hand","count":1},{"cardId":"WATCHER_INNER_PEACE","pile":"Hand","count":1},{"cardId":"WATCHER_ERUPTION_P","pile":"Hand","count":1,"upgradeLevels":1}]',
+            "-ExpectedInitialCombatEndedTurn", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 发泄打出后会把自己随机洗回抽牌堆。这一步之前没建模，实机日志里一直在报未镜像。
+        Id = "WATCHER-TANTRUM-SHUFFLES-BACK"
+        Why = "发泄打出后洗回抽牌堆，不能再报未镜像。"
+        Args = @(
+            "-EnemyCurrentHp", "200", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", (Hand @("WATCHER_TANTRUM")),
+            "-ExpectedInitialFirstActionCardId", "WATCHER_TANTRUM",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
     }
 )
 

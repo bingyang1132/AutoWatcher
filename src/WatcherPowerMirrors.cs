@@ -112,15 +112,24 @@ internal static class WatcherPowerMirrors
 
     /// <summary>怒意：打出后把自己随机洗回抽牌堆。</summary>
     /// <remarks>
-    /// 这一步不实现。打出后这张牌去哪个牌堆由求解器的结果位置镜像决定，在这里再插一次牌堆
-    /// 移动会和那条流程打架；而原版的三个前置条件里有一条是"此刻还在出牌堆"，正好依赖那个
-    /// 尚未定下来的位置。与其猜一个可能相反的结果，不如明确记风险。
+    /// 原版的三个前置条件照抄：打出的就是它自己、此刻还在出牌堆、不是复制出来的那一份。
+    ///
+    /// 之前担心在这里挪牌堆会和求解器自己的"结果位置"流程打架，实际不会：求解器挪牌之前先判
+    /// <c>card.GetPile(State)?.Type is PileType.Play</c>，这里已经把它挪走了，那一步就跳过。
+    /// 判据也正好是同一个，所以两边不会各挪一次。
+    ///
+    /// 这一步得实现，因为它让怒意变成一个可以自己续上的循环——配合凌波微步的进入愤怒抽牌，
+    /// 打出去的怒意会被自己触发的抽牌抽回来。不建模的话求解器根本看不见这条线。
     /// </remarks>
     private static void Tantrum(WatcherTantrum card, AfterCardPlayedMirrorContext context)
     {
-        if (card.Owner is not { } owner || !ReferenceEquals(context.CardPlay.Card, card))
+        if (card.Owner is null || !ReferenceEquals(context.CardPlay.Card, card))
             return;
-        Sim(context, owner).Unmirrored($"{card.Id.Entry} 打出后会把自己随机洗回抽牌堆");
+        if (context.Card.GetPile(context.State)?.Type is not PileType.Play)
+            return;
+        if (card.IsDupe)
+            return;
+        context.Simulator.AddToPile(context.Card, PileType.Draw, CardPilePosition.Random);
     }
 
     /// <summary>格挡反弹：挂在敌人身上，攻击它的人反而获得格挡。</summary>

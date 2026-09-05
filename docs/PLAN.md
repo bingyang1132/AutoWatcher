@@ -53,7 +53,7 @@ Harmony postfix 的 `XxxCompat` 方法或求解器根本不分发的钩子，各
 | `BeforeHandDrawCompat` | 观者状态的延迟保留、预知的回合初预视 | 保留和预视时机错 |
 | `AfterCardRetained` / `AfterFlush` | 洗炼的格挡、时之沙的费用、风车打击的伤害逐次增长 | 这三张牌在路线内被保留时数值不涨，系统性低估 |
 | `OnScryDiscarded` | 圣歌与启示这两张不可打出牌的全部效果 | 完全不生效 |
-| `AfterCardChangedPiles` | 凌波微步的延迟抽牌、陶瓷鱼的金币 | 凌波微步在出牌堆非空时的抽牌漏掉 |
+| ~~`AfterCardChangedPiles`~~ | ~~凌波微步的延迟抽牌~~ | **已补**：`WatcherRushdownPatch` 挂在 `CombatPredictionSimulator.OnPlayWrapper` 之后，那正好是牌离开出牌堆之后。陶瓷鱼的金币不属于战斗状态，不做 |
 | `AfterEnergyReset` | 神性形态的能量、能量下降 | 能量算错 |
 | `AfterPlayerTurnStartEarly` | 观者状态的每回合计数器重置、神威天罚的每回合一次重置、悟命的真言发放 | 计数器不重置；神威天罚因此只能记风险不生效 |
 

@@ -92,6 +92,9 @@ public static class Entry
         harmony.Patch(
             WatcherExtraTurnPatch.ResolveConsumeTarget(),
             postfix: new HarmonyMethod(typeof(WatcherExtraTurnPatch), nameof(WatcherExtraTurnPatch.ConsumePostfix)));
+        harmony.Patch(
+            WatcherRushdownPatch.ResolveTarget(),
+            postfix: new HarmonyMethod(typeof(WatcherRushdownPatch), nameof(WatcherRushdownPatch.Postfix)));
 
         WatcherHookMirrors.RegisterAll();
 

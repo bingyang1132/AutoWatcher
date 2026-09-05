@@ -95,6 +95,31 @@ internal static class WatcherStanceVerbs
         return true;
     }
 
+    /// <summary>凌波微步：进入愤怒时抽牌。这是观者能打出无限循环的那一条。</summary>
+    /// <remarks>
+    /// 原版分两种情况，判据是此刻出牌堆空不空：
+    /// 出牌堆是空的，说明这次进入愤怒不是某张牌打出来的（比如沸腾之怒在回合开始时进愤怒），
+    /// 当场就抽；出牌堆非空，说明正在结算一张牌，就把要抽的张数记在 Power 的
+    /// <c>PendingDraws</c> 上，等那张牌离开出牌堆再抽。
+    ///
+    /// 这个先后不是细节，它决定无限循环成不成立。以爆发+加宁静那套为例：抽牌堆里只剩宁静时，
+    /// 打出爆发+进入愤怒要抽 2 张。按原版的顺序，爆发先进弃牌堆，然后抽 2 张——抽到宁静，
+    /// 抽牌堆空了就把弃牌堆洗回来，于是爆发又回到手里，循环成立。如果在结算当中就抽，
+    /// 爆发还在出牌堆里，第二张什么也抽不到，循环断掉。
+    ///
+    /// 延后的那部分由 <see cref="WatcherRushdownPatch" /> 在一张牌结算完之后清空。
+    /// </remarks>
+    private static void RushdownDraw(WatcherSim sim)
+    {
+        if (sim.Combat.GetMutablePower<RushdownPower>(sim.Self) is not { Amount: > 0 } rushdown)
+            return;
+
+        if (sim.OwnerState.PlayPile.Cards.Count == 0)
+            sim.Simulator.Draw(sim.Owner, rushdown.Amount);
+        else
+            rushdown.PendingDraws += rushdown.Amount;
+    }
+
     private static Type? CurrentStance(WatcherSim sim)
     {
         if (sim.Combat.GetAmount<Divinity>(sim.Self) > 0)
@@ -111,13 +136,12 @@ internal static class WatcherStanceVerbs
     /// <summary>对应 <c>WatcherCombatHelper.OnStanceChanged</c> 的六路扇出。</summary>
     /// <remarks>
     /// 紫莲花和金瞳这类遗物在原版里是按遗物 ID 字符串轮询的，不是钩子，所以必须在这里读，
-    /// 否则光靠钩子镜像会漏掉。凌波微步和退出预知的悟命两路仍记风险：前者要在出牌堆非空时改
-    /// Power 上的一个字段，后者依赖天命消耗标记，都值得单独一轮验证再接。
+    /// 否则光靠钩子镜像会漏掉。退出预知的悟命那一路仍记风险，它依赖天命消耗标记。
     /// </remarks>
     private static void AfterStanceChanged(WatcherSim sim, Type? oldStance, Type? newStance)
     {
-        if (newStance == typeof(Wrath) && sim.Combat.GetAmount<RushdownPower>(sim.Self) > 0)
-            sim.Unmirrored("凌波微步的进入愤怒抽牌");
+        if (newStance == typeof(Wrath))
+            RushdownDraw(sim);
 
         if (sim.Combat.GetAmount<MentalFortressPower>(sim.Self) is > 0 and var fortress
             && oldStance != newStance)
