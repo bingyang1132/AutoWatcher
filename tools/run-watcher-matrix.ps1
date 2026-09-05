@@ -19,14 +19,31 @@
     1. mods/ 里只留 CombatSolver、Watcher、SolverWatcherAdapter 三个。
        其他 gameplay mod（尤其 LotmMod）会让求解器停在第三方检查上，与观者无关。
     2. 改过 mod 之后先 Stop-Process -Name SlayTheSpire2，否则 harness 会复用旧进程，
-       测到的是旧的加载状态。本脚本开头会自动杀，并且每条用例都用独立进程（-ExitOnComplete），
-       因为复用进程在切换敌人注入方式时会卡住。
+       测到的是旧的加载状态。本脚本开头会自动杀，并且每条用例都用独立进程（-ExitOnComplete）。
+
+  为什么不复用进程省开机时间——这条路试过两次都失败，不要再试：
+    一条用例 28 秒里约 25 秒是开机，真正搜索只要 70 毫秒，看着很值得复用。harness 那边确实支持：
+    不带 -ExitOnComplete 时会跑 WaitUntilReusableAsync，回到主菜单后写出可复用标记，日志里能看到
+    PROCESS_QUIESCENT reuse_process=true。
+    卡住的是调用方。复用模式下游戏进程故意留活着，它继承了子进程的标准输出句柄，于是
+    `$out = & pwsh ...` 会一直等到句柄关闭（也就是等到游戏退出）才返回。换成 Start-Process
+    -RedirectStandardOutput 会因为参数里的空格路径被拆断；换成 `*>` 文件重定向仍然挂。
+    两轮下来花掉近二十分钟没有拿到结果，收益（8 分钟降到 1 分钟）不值这个代价。就用一条一进程。
+
+  想快就少跑几条：用 -Tag 只跑和本次改动相关的。改单张牌的镜像不可能弄坏爆发或警戒；
+  只有动词层、姿态、Harmony 补丁、注册这类跨切面的改动才需要全量。
 #>
 param(
     [string]$SolverRepo = "E:\Modding\SlayTheSpire2\CombatSolver",
     [string]$GameRoot = "D:\Sponsored\Steam\steamapps\common\Slay the Spire 2",
     [string]$RitsuWorkshopRoot = "D:\Sponsored\Steam\steamapps\workshop\content\2868840\3747602295",
     [string]$Only = "",
+    # 只跑带某个标签的用例。标签按"哪一层改动可能弄坏它"划分：
+    #   smoke    最基本的几条，任何改动都值得跑
+    #   stance   姿态动词        energy 能量收支      damage 伤害倍率与数值
+    #   patches  Harmony 补丁    hooks  钩子镜像      cards  单张牌的镜像
+    #   retain   手牌保留        draw   抽牌与循环    turnflow 回合流程
+    [string]$Tag = "",
     [string]$ProgressPath = "",
     [switch]$NoRestart
 )
@@ -58,6 +75,7 @@ function Hand([string[]]$cardIds) {
 $cases = @(
     @{
         Id = "WATCHER-ERUPTION-WRATH"
+        Tags = @("smoke", "stance")
         Why = "爆发可打出且完全镜像。求解器不得报告任何未镜像效果。"
         Args = @(
             "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
@@ -68,6 +86,7 @@ $cases = @(
     },
     @{
         Id = "WATCHER-VIGILANCE-BLOCK"
+        Tags = @("smoke", "stance")
         Why = "警戒给 8 点格挡。数值错了这条就过不去。"
         Args = @(
             "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
@@ -90,6 +109,7 @@ $cases = @(
         # 三个动作的线路在格挡和伤害上都严格更优，所以求解器一定会选它，不会像上一版那样
         # 因为奇迹带保留关键字而留牌。这里刻意不放奇迹，就是为了去掉那个自主选择。
         Id = "WATCHER-CALM-EXIT-ENERGY"
+        Tags = @("stance", "energy")
         Why = "退出平静补 2 点能量。固定 4 点能量下，没有它任何顺序都只有 2 个动作。"
         Args = @(
             "-EnemyCurrentHp", "80", "-ClearPlayerPiles", "-InitialPlayerEnergy", "4",
@@ -107,6 +127,7 @@ $cases = @(
         #   这里用两张爆发而不是爆发加警戒，是为了不让"退出平静补能量"顶替奇迹的能量，
         #   否则这条就测不出奇迹。
         Id = "WATCHER-MIRACLE-ENERGY"
+        Tags = @("energy")
         Why = "奇迹给 1 点能量。没有它第二张爆发付不起，动作数只有 2。"
         Args = @(
             "-EnemyCurrentHp", "80", "-ClearPlayerPiles",
@@ -121,6 +142,7 @@ $cases = @(
         #   随后的打击 6 点吃翻倍变 12 点。合计 21 点，正好击杀 21 血的敌人。
         #   愤怒没建模的话只有 9 + 6 = 15 点，第一回合杀不掉，投影结束回合就不是 1。
         Id = "WATCHER-WRATH-DOUBLE-DAMAGE"
+        Tags = @("stance", "damage")
         Why = "愤怒把后续攻击翻倍。爆发 9 加打击 6x2 正好 21 点击杀；没建模只有 15 点。"
         Args = @(
             "-InitialEnemyCurrentHpsJson", "[21]", "-ClearPlayerPiles",
@@ -138,6 +160,7 @@ $cases = @(
         # 这条走的是 Harmony postfix 那条无声路径，求解器从不调那个方法，必须手写补上，
         # 所以它同时也是"五个无声缺口"里最要紧那一个的验证。
         Id = "WATCHER-MANTRA-TO-DIVINITY"
+        Tags = @("stance", "hooks")
         Why = "真言满 10 转神圣并补 3 点能量。没建模的话第三个动作付不起。"
         Args = @(
             "-EnemyCurrentHp", "120", "-ClearPlayerPiles", "-InitialPlayerEnergy", "4",
@@ -150,6 +173,7 @@ $cases = @(
         # 直接击杀动词。审判比的是当前生命，21 <= 30 所以斩杀成立。
         # 没有击杀动词的话这张牌是纯空操作，敌人活着，投影结束回合不会是 1。
         Id = "WATCHER-JUDGMENT-EXECUTE"
+        Tags = @("damage")
         Why = "审判在目标生命不高于阈值时直接击杀。没建模的话这张牌什么都不做。"
         Args = @(
             "-InitialEnemyCurrentHpsJson", "[21]", "-ClearPlayerPiles",
@@ -163,6 +187,7 @@ $cases = @(
         # 所以手里剩 4 张打击，格挡 = 4 x 3 = 12。
         # 按固定值或者把自己也数进去，得到的都不是 12。
         Id = "WATCHER-SPIRIT-SHIELD-SCALING"
+        Tags = @("damage")
         Why = "护体的格挡等于手牌数乘 3，且不计自己。四张打击在手时应为 12。"
         Args = @(
             "-EnemyCurrentHp", "120", "-ClearPlayerPiles",
@@ -181,6 +206,7 @@ $cases = @(
         # 激励的伤害加成来自原版 VigorPower 的只读钩子，求解器本来就会回落到它的实现，
         # 所以这条同时验证了"姿态与 Power 一旦在模拟里正确，倍率和加成就自动正确"这个前提。
         Id = "WATCHER-WREATH-VIGOR-DAMAGE"
+        Tags = @("damage")
         Why = "烈焰之环施加 5 点激励，让打击 6 点变 11 点，正好击杀 11 血。"
         Args = @(
             "-InitialEnemyCurrentHpsJson", "[11]", "-ClearPlayerPiles",
@@ -196,6 +222,7 @@ $cases = @(
         # 这条对应打旧日雕像时反复出现的计划外重算：日志里第一处差异就是这张牌的费用
         # 预测 4、实际 3。
         Id = "WATCHER-SANDS-RETAIN-COST"
+        Tags = @("patches", "retain")
         Why = "时之沙每次被保留降 1 费。没建模的话 4 费永远付不起，第二回合结束不了。"
         Args = @(
             "-InitialEnemyCurrentHpsJson", "[20]", "-ClearPlayerPiles",
@@ -211,6 +238,7 @@ $cases = @(
         # 这里不断言未镜像项为 0——碎骨在路线首张时读不到上一张牌的类型，会按约定记一条风险，
         # 而出牌顺序由求解器自己定，断言 0 会变成不确定的。
         Id = "WATCHER-CRUSH-JOINTS-VAR-KEY"
+        Tags = @("cards", "damage")
         Why = "碎骨的易感层数取自 PowerVar，键是类型名。写错时这张牌一打出来整次搜索就失败。"
         Args = @(
             "-EnemyCurrentHp", "80", "-ClearPlayerPiles",
@@ -221,6 +249,7 @@ $cases = @(
         # 回归锁，不是算术判别。3 这个数是对已验证的构建实测出来的，
         # 不是推导出来的。姿态或伤害倍率的建模一旦变化，这个回合数就会变。
         Id = "WATCHER-STANCE-REGRESSION-LOCK"
+        Tags = @("smoke", "stance", "damage")
         Why = "爆发加打击循环打 100 血，投影三回合结束。实测值，用来锁住姿态与伤害倍率的建模。"
         Args = @(
             "-EnemyCurrentHp", "100", "-ClearPlayerPiles",
@@ -241,6 +270,7 @@ $cases = @(
         #   有 bug：打击 6 + 结末 12 + 结末 12 = 30，第一回合就死。
         # 所以用结束回合数判别，1 和 2 不会混。
         Id = "WATCHER-CONCLUDE-ENDS-TURN"
+        Tags = @("turnflow")
         Why = "结末打出后本回合就结束，后面接不了牌。渎神自杀事故的根因。"
         Args = @(
             "-EnemyCurrentHp", "30", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
@@ -258,6 +288,7 @@ $cases = @(
         # 而在能打死的那一回合打渎神其实是对的（神圣的伤害倍率白拿，死亡永远不会到来）。
         # 第一版用了 200 血，结果求解器在致命回合打了渎神并且赢了——那是正确下法，不是 bug。
         Id = "WATCHER-BLASPHEMY-NO-SUICIDE"
+        Tags = @("turnflow", "patches")
         Why = "赢不了的时候不能打渎神。"
         Args = @(
             "-EnemyCurrentHp", "60", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
@@ -273,6 +304,7 @@ $cases = @(
         #   减错费：时之沙 3 费一张打完，20 伤害，能量清空。
         # 27 比 20 高，所以只有减费没被提前应用，第一个动作才会是打击+。
         Id = "WATCHER-SANDS-NO-DRAW-TURN-DISCOUNT"
+        Tags = @("patches", "retain")
         Why = "时之沙抽上来那回合不降费，要在手上过一个回合末才降。"
         Args = @(
             "-EnemyCurrentHp", "200", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
@@ -292,6 +324,7 @@ $cases = @(
         # 暴怒还在出牌堆里，抽牌堆见底重洗时抽不到它，循环就断了。
         # 断了的话第一回合最多打三张牌，敌人打不死。
         Id = "WATCHER-RUSHDOWN-INFINITE"
+        Tags = @("patches", "draw", "stance")
         Why = "凌波微步的进入愤怒抽牌撑起红蓝无限，第一回合就该打完。"
         Args = @(
             "-EnemyCurrentHp", "200", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
@@ -303,6 +336,7 @@ $cases = @(
     @{
         # 发泄打出后会把自己随机洗回抽牌堆。这一步之前没建模，实机日志里一直在报未镜像。
         Id = "WATCHER-TANTRUM-SHUFFLES-BACK"
+        Tags = @("hooks", "cards")
         Why = "发泄打出后洗回抽牌堆，不能再报未镜像。"
         Args = @(
             "-EnemyCurrentHp", "200", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
@@ -316,6 +350,7 @@ $cases = @(
 # 要用 @() 包住。只筛出一条时 PowerShell 会把数组拆成单个哈希表，
 # 那时 .Count 数的是哈希表的键个数，进度里就会报出"共 3 条"这种假数。
 if ($Only) { $cases = @($cases | Where-Object { $_.Id -eq $Only }) }
+if ($Tag)  { $cases = @($cases | Where-Object { $_.Tags -contains $Tag }) }
 if (-not $cases) { throw "没有匹配的用例：$Only" }
 
 if (-not $NoRestart) {
@@ -331,6 +366,9 @@ foreach ($case in $cases) {
     Write-Host ""
     Write-Host "=== $($case.Id)" -ForegroundColor Cyan
     Write-Host "    $($case.Why)"
+    # 并行度必须钉死：不钉的话线程调度会让展开顺序变化，像"结束回合数"这种最优性断言
+    # 会随机不过——实测出现过一次。不要再加 -ShortSearchBudgetOverrideMilliseconds：这些夹具
+    # 的搜索本身只要 70 毫秒，给一个几秒的预算是纯粹白等，每条会多花那么多秒。
     $argv = @(
         "-NoProfile", "-File", $runner,
         "-ScenarioId", $case.Id,
@@ -339,7 +377,9 @@ foreach ($case in $cases) {
         "-Sts2GameRoot", $GameRoot,
         "-RitsuWorkshopRoot", $RitsuWorkshopRoot,
         "-StopAfterInitialSolverResultAssertion",
-        "-TimeoutSeconds", "150",
+        "-ForceShortSearchOnly",
+        "-SearchMaxDegreeOfParallelismForTest", "1",
+        "-TimeoutSeconds", "150"
         "-ExitOnComplete"
     ) + $case.Args
     $output = & pwsh @argv 2>&1

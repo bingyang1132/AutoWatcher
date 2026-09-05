@@ -284,10 +284,22 @@ internal static partial class WatcherCardMirrors
     /// <summary>目标本来打算攻击的话，攻击后进入平静。</summary>
     /// <remarks>
     /// 意图在伤害结算之前就取好了，所以把目标打死、或者目标因为受击而改变意图，都仍然给平静。
+    ///
+    /// 必须走 <c>SimulatedCombatState.IsEnemyIntendingToAttack</c>，不能读
+    /// <c>Target.Monster.IntendsToAttack</c>。后者是**实时**意图：镜像跑在后台线程上，读到的是
+    /// 玩家此刻在屏幕上看到的那个意图，而不是这条路线推进到该回合时模拟出的意图。求解器为此
+    /// 专门维护了一份预测意图集合，它按分支 fork、并且进状态指纹；原版的「直击要害」用的就是
+    /// 这个接口。
+    ///
+    /// 这一条实机报出过偏差：第 4 回合 不惧妖邪+ 打在一颗打算啃咬的蛋上，实机因此进入平静，
+    /// 于是紧接着的 暴怒+ 只打 9 点；镜像读到的实时意图是不攻击、没进平静、留在愤怒里，把
+    /// 暴怒+ 算成 18 点，于是预测那颗 21 血的蛋会被打死。实际它剩 6 点活了下来，下一回合多啃
+    /// 一口，预计战损 2 变成实际 13。
     /// </remarks>
     private static void FearNoEvil(WatcherFearNoEvil card, CardOnPlayMirrorContext context)
     {
-        bool wasAttacking = context.CardPlay.Target?.Monster?.IntendsToAttack == true;
+        bool wasAttacking = context.CardPlay.Target is { } target
+            && V.Combat(context).IsEnemyIntendingToAttack(target);
         V.Attack(context);
         if (wasAttacking)
             S.EnterCalm(context);
