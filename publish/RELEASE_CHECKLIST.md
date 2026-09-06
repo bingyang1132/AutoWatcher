@@ -12,10 +12,11 @@
 
 ## 打包
 
-- [x] 图标 `publish/icon.svg`（原创，不含任何第三方素材）
-- [ ] 图标转 PNG。本机没有 SVG 渲染器（无 ImageMagick / Inkscape / cairosvg / PIL），
-      浏览器打开另存即可，或者装一个渲染器
-- [ ] `image.png` 创意工坊预览图（模板是 467×467）
+- [x] 图标 `publish/icon.png`（1254×1254，作者自制）
+- [ ] 创意工坊要几种尺寸的图（模板里 `image.png` 是 467×467，另有 `icon.jpg` / `profile.jpg`）。
+      本机没有图像处理工具（无 ImageMagick / PIL），缩放要么你来，要么装一个
+- [ ] **名字要定**：图标文件叫 `AutoWatcher`，清单里现在是 `SolverWatcherAdapter` /
+      「观者求解器适配」。两个名字得统一，创意工坊标题、GitHub 仓库名、`mod id` 都跟着它
 - [ ] `workshop.json`：标题、描述、可见性、依赖项（要填 CombatSolver 和 Watcher 的
       创意工坊 item id，不是 mod id）
 - [ ] `content/` 目录：`SolverWatcherAdapter.dll` + `SolverWatcherAdapter.json`
