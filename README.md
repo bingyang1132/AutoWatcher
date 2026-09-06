@@ -272,9 +272,27 @@ pwsh -NoProfile -File tools/run-watcher-matrix.ps1
 
 **适配层修不了这条。** `StrategicEffectModel.Requirements` / `Evaluate` 是按原版 Power 类型写死的
 `switch`，没有第三方登记入口；设置估值那圈的"只看自己身上"也是硬编码。要修得动求解器：给"挂在别人
-身上、但收益归玩家"的 Power 一个登记点，让它计进 `PreventionPotential`（反弹格挡的估值天然可以用
-现成的 `StrategicEffectRequirements.AttackPlays`：层数 × 本回合还打得出几张攻击）。这属于发布前
-要提的扩展点之一。
+身上、但收益归玩家"的 Power 一个登记点，让它计进 `PreventionPotential`。这属于发布前要提的扩展点
+之一。
+
+**估值不能按攻击牌张数算。** 反弹格挡是**按伤害段数**触发的：`CombatPredictionSimulator.Attack`
+是 `for (i = 0; i < hitCount; i++) { Damage(...) }`，每段各产生一个 `DamageResult`，每个 result
+各分发一次 `AfterDamageGiven`。发泄 1 张牌打 3 段就是 6 甲，不是 2 甲。观者一手多段牌，按张算会
+系统性低估。
+
+而求解器现成的 `StrategicEffectRequirements.AttackPlays` 数的正是**牌数**（`attackCount` 按
+`liveCards` 里 `Type == Attack` 逐张累加），`CardChoiceSupport.CardValue` 也只读 `Damage` 基础值、
+不乘段数。也就是说没有现成的按段计数可用，得新加。
+
+分两件事看：
+- **准入**（真正解决这个 bug 的那一半）：`ClassifyActionOptionFamilies` 判的是
+  `after.PreventionPotential > before.PreventionPotential`，只要**非零**就够，多段不多段不影响。
+  排序一旦被展开，格挡本身是精确模拟的，段数一点不差。
+- **排名**（次要）：数值只影响这条线在真格挡兑现之前能在 Beam 里活多久。低估会剪掉好线，所以
+  按既定规矩要往**高**了估，不能拿张数当代理。
+
+`WATCHER-BLOCK-RETURN-HOOK`（单段，2 张打击 = 4 甲）和 `WATCHER-BLOCK-RETURN-MULTIHIT`
+（发泄 3 段 = 6 甲）把按段触发这件事钉住了。
 
 **直飞产卵虫战里满屏的红字。** 那一份日志里只有两条，各七千次上下：发泄打出后洗回抽牌堆、
 凌波微步的进入愤怒抽牌。两条都已实现，见上面"红蓝无限"一节。同一份日志里没有任何重算、

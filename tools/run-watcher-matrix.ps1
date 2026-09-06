@@ -150,6 +150,23 @@ $cases = @(
         )
     },
     @{
+        # 同一层反弹格挡，换成多段攻击。发泄 1 费、3 点伤害打 3 段，所以是 3 次触发 = 6 甲，
+        # 不是 1 张牌 = 2 甲。原版 for (i < hitCount) 每段各走一次 Damage()，每个 DamageResult
+        # 各分发一次 AfterDamageGiven —— 这条把"按段算不按张算"钉死。
+        #
+        # 这也是为什么估值不能拿攻击牌张数当代理：观者一手多段牌，按张算会低估三倍。
+        Id = "WATCHER-BLOCK-RETURN-MULTIHIT"
+        Tags = @("hooks", "damage")
+        Why = "反弹格挡按伤害段数触发。发泄 3 段 = 6 甲；按张算只有 2 甲。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
+            "-PowerId", "BLOCK_RETURN_POWER", "-PowerAmount", "2", "-PowerTarget", "Enemy",
+            "-CardsJson", (Hand @("WATCHER_TANTRUM")),
+            "-ExpectedInitialMaxBlockAtLeast", "6",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
         Id = "WATCHER-VIGILANCE-BLOCK"
         Tags = @("smoke", "stance")
         Why = "警戒给 8 点格挡。数值错了这条就过不去。"
