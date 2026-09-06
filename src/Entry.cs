@@ -62,6 +62,9 @@ public static class Entry
         PredictionModHookSubscriberCapture.KnownPreRootSubscriberTypeNames.Add(
             typeof(WatcherEnchantStackHookProxy).FullName!);
 
+        // 带"什么时候才打得出"条件的牌。不登记的话求解器按恒真算，路线会排进打不出的牌。
+        WatcherPlayabilityMirrors.Register();
+
         MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> onPlay = CardOnPlayMirrors.Registry;
         onPlay.Register<WatcherStrike_P>(StarterDeckMirrors.Strike);
         onPlay.Register<WatcherDefend_P>(StarterDeckMirrors.Defend);

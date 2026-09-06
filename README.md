@@ -145,6 +145,12 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 排序和分支上限沿用求解器现成的那套。部署时也照计划应答原生选牌页面，不再每次预视都触发重算。
 夹具 `WATCHER-SCRY-DISCARD-BRANCH`：天眼配四张打击在抽牌堆，`choice_branches=4`，红字 0 条。
 
+标志性一击有"手上只有它一张攻击牌才打得出"的条件，登记在 `CardIsPlayableMirrors` 里，判据读
+模拟的手牌。不登记的话求解器按恒真算，会把它排进路线，直到部署那一步才报 `card_unplayable`，
+而这时前面几个动作已经打出去了，只能从更差的局面重算。钉死的这一版观者只有这一张需要登记；
+姿态药水的两张选择令牌也重写了这个属性，但写死是 `false`，基类回落本来就对。
+夹具 `WATCHER-SIGNATURE-MOVE-UNPLAYABLE`。
+
 ## 测试环境要求
 
 **必须收窄 mod 集。** 你装的 LotmMod 会让求解器停在同一道门上

@@ -85,6 +85,18 @@ $cases = @(
         )
     },
     @{
+        Id = "WATCHER-SIGNATURE-MOVE-UNPLAYABLE"
+        Tags = @("cards", "hooks")
+        Why = "标志性一击要手上只有它一张攻击牌才打得出。手里四张攻击、三费，最优是打三张打击共 3 个动作；把它当成随时可打的话最优会变成它加一张打击、只有 2 个动作。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
+            "-CardsJson", '[{"cardId":"WATCHER_SIGNATURE_MOVE","pile":"Hand","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Hand","count":3}]',
+            "-ExpectedInitialFirstActionCardId", "WATCHER_STRIKE_P",
+            "-ExpectedInitialExecutableActionCountAtLeast", "3",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
         Id = "WATCHER-SCRY-DISCARD-BRANCH"
         Tags = @("cards", "draw")
         Why = "天眼的预视要开出真正的搜索分支：牌堆顶三张里挑哪几张丢，由求解器自己搜，不再记成未建模选择。"
