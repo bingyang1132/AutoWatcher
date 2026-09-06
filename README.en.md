@@ -17,7 +17,7 @@ arithmetic right.
 
 | Dependency | Where |
 |---|---|
-| Combat Solver | [GitHub](https://github.com/Torch1230/CombatSolver) / Steam Workshop |
+| Combat Solver | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) / [GitHub](https://github.com/Torch1230/CombatSolver) |
 | Watcher (by Boninall) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
 | RitsuLib | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
 
@@ -93,7 +93,7 @@ the outstanding-work list is in [docs/PLAN.md](docs/PLAN.md).
 
 - **Boninall** — author of the Watcher mod
 - **Torch1230** and the Combat Solver contributors
-- Adapter written by **bingyang1132** paired with **Claude (Anthropic)**
+- Thanks to **Claude (Anthropic)** for help with the development
 
 MIT licensed, see [LICENSE](LICENSE). Third-party assembly references are documented in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

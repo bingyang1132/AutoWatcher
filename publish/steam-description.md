@@ -1,12 +1,25 @@
 # 创意工坊页面文案
 
+创意工坊的标题和正文是**分语言**的：Steam 的 `SetItemUpdateLanguage` 可以给同一个条目上传
+多份语言版本，玩家看到哪一份由他自己的 Steam 语言决定。所以这里中英各写一份**纯**该语言的
+正文，不再中英混排。
+
+- 简体中文（`schinese`）：下面「## 正文 · 简体中文」一节
+- English（`english`，同时作为其他语言的回退）：下面「## 正文 · English」一节
+
+改完跑 `python publish/build-workshop-json.py` 生成 `publish/workshop.json`，别手工改 JSON。
+
+正文是 BBCode，不是 markdown —— 写 `**粗体**` 会原样显示出来，要写 `[b]粗体[/b]`。
+
 ## 标题
 
 ```
 自动观者 | AutoWatcher
 ```
 
-## 正文（中文在前，英文在后）
+中英两版共用这一个标题。它本身就是双语的，够短，不值得再分。
+
+## 正文 · 简体中文
 
 ---
 
@@ -43,6 +56,7 @@
 你装的是哪一对。
 
 本 Mod 的 GitHub：https://github.com/bingyang1132/AutoWatcher
+求解器的创意工坊：https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961
 求解器的 GitHub：https://github.com/Torch1230/CombatSolver
 
 [h2]覆盖了什么[/h2]
@@ -73,13 +87,13 @@
 [h2]致谢[/h2]
 
 观者 Mod 作者 Boninall；自动战斗求解器作者 Torch1230 及各位贡献者。
-适配层由 bingyang1132 与 Claude（Anthropic）结对开发，MIT 授权。
+感谢 Claude（Anthropic）在开发上的帮助。本 Mod 以 MIT 授权。
 
 本 Mod 是非官方社区作品，与 Mega Crit 无关。
 
-[hr][/hr]
+## 正文 · English
 
-[h1]English[/h1]
+---
 
 Teaches the [b]Combat Solver[/b] to understand the [b]Watcher[/b].
 
@@ -119,6 +133,7 @@ Use them as a pair. Mixing a Workshop solver with a GitHub adapter build (or the
 silently mismatch. When something breaks, check which pair you have installed first.
 
 This mod on GitHub: https://github.com/bingyang1132/AutoWatcher
+The solver on the Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961
 The solver on GitHub: https://github.com/Torch1230/CombatSolver
 
 [h2]What is covered[/h2]
@@ -157,6 +172,6 @@ bug package I can usually locate the problem; a text description alone usually i
 [h2]Credits[/h2]
 
 Boninall, author of the Watcher mod; Torch1230 and the Combat Solver contributors.
-Adapter written by bingyang1132 paired with Claude (Anthropic). MIT licensed.
+Thanks to Claude (Anthropic) for help with the development. MIT licensed.
 
 This is an unofficial community mod, not affiliated with Mega Crit.

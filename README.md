@@ -14,7 +14,7 @@
 
 | 依赖 | 说明 |
 |---|---|
-| 自动战斗求解器（CombatSolver） | [GitHub](https://github.com/Torch1230/CombatSolver) ／ 创意工坊 |
+| 自动战斗求解器（CombatSolver） | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) ／ [GitHub](https://github.com/Torch1230/CombatSolver) |
 | 观者（Watcher，作者 Boninall） | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
 | RitsuLib | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
 
@@ -78,7 +78,7 @@ dotnet build AutoWatcher.csproj -c Release
 
 - 观者 Mod 作者 **Boninall**
 - 自动战斗求解器作者 **Torch1230**，以及求解器的各位贡献者
-- 适配层由 **bingyang1132** 与 **Claude（Anthropic）**结对开发
+- 感谢 **Claude（Anthropic）** 在开发上的帮助
 
 本 Mod 以 MIT 授权，见 [LICENSE](LICENSE)。第三方程序集的引用关系见
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

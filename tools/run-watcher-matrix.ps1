@@ -1,4 +1,4 @@
-#requires -Version 7.0
+﻿#requires -Version 7.0
 <#
   观者适配层的验收矩阵。
 
@@ -45,12 +45,37 @@ param(
     #   retain   手牌保留        draw   抽牌与循环    turnflow 回合流程
     [string]$Tag = "",
     [string]$ProgressPath = "",
+    # 整个矩阵的硬时限。一条用例正常 28 秒，但 harness 卡住时会一直耗到自己的 150 秒上限，
+    # 23 条全卡就是近一小时。到点就停下并把没跑的列成"未运行"，不要让它无声地拖下去。
+    [int]$MaxTotalMinutes = 20,
     [switch]$NoRestart
 )
 
 $ErrorActionPreference = "Stop"
 $runner = Join-Path $SolverRepo "tools\run-unattended-test.ps1"
 if (-not (Test-Path -LiteralPath $runner)) { throw "找不到 harness：$runner" }
+
+# harness 跑的是求解器仓库的 Release 构建产物，而适配层是照着游戏 mods 目录里那份求解器编译的
+# （csproj 的 HintPath 就指在那儿）。两份版本一旦不一样，适配层在 harness 里加载不上，于是观者的
+# ModHelper 订阅者不再被放行，每条用例都撞 IncompatibleGameplayModException 再等满 150 秒超时。
+# 23 条全跑完要一小时，最后只告诉你"全都没过"。这个坑踩过两次，所以开跑前先对一次版本。
+$solverBuildDll = Join-Path $SolverRepo ".godot\mono\temp\bin\Release\CombatSolver.dll"
+$solverDeployedDll = Join-Path $GameRoot "mods\CombatSolver\CombatSolver.dll"
+foreach ($required in @($solverBuildDll, $solverDeployedDll)) {
+    if (-not (Test-Path -LiteralPath $required)) { throw "找不到求解器：$required" }
+}
+$buildVersion = [Reflection.AssemblyName]::GetAssemblyName($solverBuildDll).Version
+$deployedVersion = [Reflection.AssemblyName]::GetAssemblyName($solverDeployedDll).Version
+if ($buildVersion -ne $deployedVersion) {
+    throw @"
+求解器版本对不上，先不要跑：
+  harness 用的 Release 构建产物 $solverBuildDll 是 $buildVersion
+  适配层编译时引用的     $solverDeployedDll 是 $deployedVersion
+先在求解器仓库跑一次 dotnet build CombatSolver.csproj -c Release，再重新构建适配层。
+"@
+}
+Write-Host "求解器版本 $buildVersion（构建产物与部署一致）" -ForegroundColor DarkGray
+
 
 # 整个矩阵要跑好几分钟，一定是放后台跑的。而 PowerShell 的标准输出要等进程退出才刷出来，
 # 后台看到的输出文件在跑完之前一直是 0 字节，看着像卡死。所以每跑完一条就往进度文件写一行，
@@ -441,10 +466,25 @@ if (-not $NoRestart) {
 }
 
 $results = @()
-Write-MatrixProgress ("开始 共 {0} 条 进度文件 {1}" -f $cases.Count, $ProgressPath)
+$deadline = (Get-Date).AddMinutes($MaxTotalMinutes)
+Write-MatrixProgress ("开始 共 {0} 条 时限 {1} 分钟 进度文件 {2}" -f $cases.Count, $MaxTotalMinutes, $ProgressPath)
 $index = 0
+$aborted = $false
 foreach ($case in $cases) {
     $index++
+    if ($aborted) {
+        $results += [pscustomobject]@{ Case = $case.Id; Passed = $false; Note = "未运行" }
+        continue
+    }
+    # 留出这一条自己的超时。剩余预算不够一条完整用例就别开头了，开了也只会撞死线。
+    $remaining = [int]($deadline - (Get-Date)).TotalSeconds
+    if ($remaining -lt 40) {
+        Write-MatrixProgress ("到时限 {0} 分钟，剩下 {1} 条未运行" -f $MaxTotalMinutes, ($cases.Count - $index + 1))
+        $aborted = $true
+        $results += [pscustomobject]@{ Case = $case.Id; Passed = $false; Note = "未运行" }
+        continue
+    }
+    $caseTimeout = [Math]::Min(150, $remaining)
     Write-Host ""
     Write-Host "=== $($case.Id)" -ForegroundColor Cyan
     Write-Host "    $($case.Why)"
@@ -461,7 +501,7 @@ foreach ($case in $cases) {
         "-StopAfterInitialSolverResultAssertion",
         "-ForceShortSearchOnly",
         "-SearchMaxDegreeOfParallelismForTest", "1",
-        "-TimeoutSeconds", "150"
+        "-TimeoutSeconds", "$caseTimeout"
         "-ExitOnComplete"
     ) + $case.Args
     $output = & pwsh @argv 2>&1
@@ -470,7 +510,7 @@ foreach ($case in $cases) {
         $output | Select-String -Pattern '"error"' | Select-Object -First 1 |
             ForEach-Object { Write-Host "    $($_.Line.Trim())" -ForegroundColor DarkYellow }
     }
-    $results += [pscustomobject]@{ Case = $case.Id; Passed = $ok }
+    $results += [pscustomobject]@{ Case = $case.Id; Passed = $ok; Note = ($ok ? "" : "未通过") }
     Write-MatrixProgress ("[{0}/{1}] {2} {3}" -f $index, $cases.Count, $case.Id, ($ok ? "通过" : "未通过"))
 }
 
@@ -478,5 +518,6 @@ Write-Host ""
 Write-Host "=== 汇总" -ForegroundColor Cyan
 $results | Format-Table -AutoSize
 $failed = ($results | Where-Object { -not $_.Passed }).Count
-Write-MatrixProgress ("结束 通过 {0}/{1}" -f ($results.Count - $failed), $results.Count)
+$notRun = ($results | Where-Object { $_.Note -eq "未运行" }).Count
+Write-MatrixProgress ("结束 通过 {0}/{1} 未通过 {2} 未运行 {3}" -f ($results.Count - $failed), $results.Count, ($failed - $notRun), $notRun)
 exit ($failed -gt 0 ? 1 : 0)
