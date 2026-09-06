@@ -254,6 +254,28 @@ pwsh -NoProfile -File tools/run-watcher-matrix.ps1
 死亡本身求解器计价没有问题：死亡是 -1e12 的分数、节点直接终止，所以只要回合结束死亡真的建模了，
 求解器绝不会主动送死。`WATCHER-BLASPHEMY-NO-SUICIDE` 用一副赢不了的牌锁住这一点。
 
+**以手拒之起不了甲 —— 是排序，不是镜像。** 反弹格挡的镜像和钩子分发都是对的，逐条和反编译出来的
+`WatcherMod.BlockReturnPower` 核对过（目标判定、施加者判定、`IsPoweredAttack`、`TotalDamage > 0`、
+受益者三级回退、`Unpowered` 不吃敏捷、不自减），`WATCHER-BLOCK-RETURN-HOOK` 把这一半钉住了。
+
+坏的是**求解器不会为了起甲把以手拒之排到攻击前面**。实测：手里以手拒之 + 两张打击，敌人这回合打
+4 点，求解器给的顺序是「打击 打击 以手拒之」—— 第 1 回合 `max_block=0`，白挨 4 点；换成「以手拒之
+打击 打击」本可以 4 甲全挡掉。第 2、3、4 回合都是 `max_block=4 actual_block=4`，也就是说层数一旦挂上
+去，后面每回合都算得对，唯独挂上去的那一回合被浪费。
+
+根因在原版求解器的动作分类。`ClassifyActionOptionFamilies` 判 `ImmediateDefense` 看四样东西：这次
+动作的格挡增量、`ProjectedPlayerHp`、`PlayerHp`、`StrategicEffects.PreventionPotential`。以手拒之
+打出的瞬间这四样一样都不动 —— 它自己不给甲，而反弹格挡这层 Power 挂在**敌人身上**，
+`StateEvaluation` 的设置估值那圈只统计 `power.Owner == 玩家` 且是增益的 Power，敌人身上的直接跳过。
+于是它被归成一张纯 `ImmediateOffense`，和打击同族但伤害更低，在族内代表里被打击压掉，只能等打击
+打完才轮到它。
+
+**适配层修不了这条。** `StrategicEffectModel.Requirements` / `Evaluate` 是按原版 Power 类型写死的
+`switch`，没有第三方登记入口；设置估值那圈的"只看自己身上"也是硬编码。要修得动求解器：给"挂在别人
+身上、但收益归玩家"的 Power 一个登记点，让它计进 `PreventionPotential`（反弹格挡的估值天然可以用
+现成的 `StrategicEffectRequirements.AttackPlays`：层数 × 本回合还打得出几张攻击）。这属于发布前
+要提的扩展点之一。
+
 **直飞产卵虫战里满屏的红字。** 那一份日志里只有两条，各七千次上下：发泄打出后洗回抽牌堆、
 凌波微步的进入愤怒抽牌。两条都已实现，见上面"红蓝无限"一节。同一份日志里没有任何重算、
 状态不一致或搜索失败，也就是说那一局的问题全部就是这两个缺口。

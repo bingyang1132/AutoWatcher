@@ -132,18 +132,19 @@ $cases = @(
         )
     },
     @{
-        # 反弹格挡挂在敌人身上，不在自己身上。求解器的 Beam 只给"自己身上的增益"记设置价值，
-        # 所以这条只能靠"打出去之后确实起了甲"来验，验的是钩子分发，不是估值。
-        # 3 点能量：以手拒之 1 费（5 伤害 + 给目标挂 2 层反弹）、两张打击各 1 费。
-        # 两次攻击各触发一次 -> 4 点格挡。手上没有任何别的格挡来源，所以 4 是纯粹来自它。
-        Id = "WATCHER-TALK-TO-THE-HAND-BLOCK"
-        Tags = @("cards", "hooks")
-        Why = "以手拒之给目标挂反弹格挡，之后每次攻击它自己起 2 甲。钩子没分发到就是 0 甲。"
+        # 反弹格挡挂在敌人身上，不在自己身上。这条只验钩子分发：直接把 BLOCK_RETURN_POWER
+        # 注到敌人头上，手里两张打击，各触发一次 -> 4 点格挡。手上没有任何别的格挡来源。
+        #
+        # 注意这条**不**验"求解器会不会为了起甲把以手拒之排到前面"——那条现在是坏的，
+        # 见 README 的已知取舍：Beam 的设置估值只统计自己身上的增益，敌人身上的这层
+        # 在动作分类里完全不可见，以手拒之被当成一张伤害更低的普通攻击排到最后。
+        Id = "WATCHER-BLOCK-RETURN-HOOK"
+        Tags = @("hooks", "damage")
+        Why = "反弹格挡挂在敌人身上，攻击它自己起 2 甲。钩子没分发到就是 0 甲。"
         Args = @(
             "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
-            "-CardsJson", (Hand @(
-                "WATCHER_TALK_TO_THE_HAND", "WATCHER_STRIKE_P", "WATCHER_STRIKE_P")),
-            "-ExpectedInitialFirstActionCardId", "WATCHER_TALK_TO_THE_HAND",
+            "-PowerId", "BLOCK_RETURN_POWER", "-PowerAmount", "2", "-PowerTarget", "Enemy",
+            "-CardsJson", (Hand @("WATCHER_STRIKE_P", "WATCHER_STRIKE_P")),
             "-ExpectedInitialMaxBlockAtLeast", "4",
             "-ExpectedInitialUnmirroredCount", "0"
         )
