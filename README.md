@@ -106,7 +106,6 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 | `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 求解器的生成接口按牌类型创建规范实例，不接受实例级负载 |
 | `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 那个 Power 自己维护一个实例表，N 张牌是 N 个独立成长的实例，不等于一个数量为 N 的实例 |
 | `WATCHER_PRESSURE_POINTS` 的无视格挡伤害 | 带 Unblockable 和 Unpowered，动词层里没有对应形式。标记本身叠对了 |
-| `WATCHER_LESSON_LEARNED` 的永久牌组升级 | 超出单场战斗模拟的范围 |
 | `WATCHER_BRILLIANCE` 的伤害 | 取自 `WatcherStatePower` 的私有计数器，而该计数不在状态指纹里。只在计数不为零时才记风险 |
 
 多人局专属牌（`WATCHER_COLD_OBSERVATION`、`WATCHER_MOCKERY`、`WATCHER_PERSUASION`、`WATCHER_RELINQUISH`、`WATCHER_SANCTIFICATION`）注册成记风险而不是空操作：求解器只支持
@@ -156,6 +155,13 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 省，原版就是按落点判的而不是按牌上的关键字判的。奇迹进手牌底部。
 夹具 `WATCHER-DEUS-EX-MACHINA-DRAW`：敌人 22 血，三张打击 18 点杀不掉，必须靠这两点能量打出
 第四张打击才够 —— 也就是说这条夹具只有在奇迹真的到手时才过。
+
+勤学精进斩杀时永久升级牌组里的一张随机牌。升到哪张超出单场战斗的范围也不影响本场，所以不模拟；
+但"斩杀了没有"决定求解器该不该为它凑最后一击，那是本场之内的决策。按原版猎杀、饱食、贪婪之手
+同一条路记：兑现时记一笔长期资源加一个 `FatalKillBonus` 目标。它消耗，所以打出去就先记一笔
+"已经打出了" —— 不斩杀就白扔，求解器要能把"从没抽到"和"当普通攻击打掉了"分开。
+折价取 `30`，和猎杀同档。夹具 `WATCHER-LESSON-LEARNED-FATAL-KILL`：敌人 8 血正好斩杀，
+`long_term_resource=30`、`long_term_goals=FatalKillBonus`。
 
 ## 测试环境要求
 

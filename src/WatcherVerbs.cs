@@ -284,6 +284,63 @@ internal static class WatcherVerbs
     // ---------- 诚实降级 ----------
 
     /// <summary>声明这一处效果没有镜像。求解器会显示成红色的未镜像，而不是静默算错。</summary>
+    // ---------- 局外收益 ----------
+
+    /// <summary>
+    /// 这张牌打出去了，而它的收益要靠斩杀兑现。消耗牌才需要记。
+    /// </summary>
+    /// <remarks>
+    /// 求解器分开记"打出了"和"兑现了"。消耗牌不斩杀就白扔，光看"兑现了"分不出"从没抽到"和
+    /// "当普通攻击打掉了"这两种路线，后者才是浪费。原版的猎杀和饱食走同一条记法；贪婪之手不
+    /// 消耗，所以只记兑现，不记打出。
+    /// </remarks>
+    public static void RecordFatalKillCardPlayed(CardOnPlayMirrorContext context)
+        => Combat(context).RecordLongTermGoalCardPlayed(LongTermGoals.FatalKillBonus);
+
+    /// <summary>斩杀兑现了一笔带出本场的收益。</summary>
+    /// <param name="value">
+    /// 折算到求解器的长期资源刻度上。那个刻度大致按金币算：贪婪之手记面值，猎杀记 30，
+    /// 生成一瓶药水记 20。
+    /// </param>
+    public static void RecordFatalKillBonus(CardOnPlayMirrorContext context, int value)
+    {
+        SimulatedCombatState combat = Combat(context);
+        combat.RecordLongTermResource(value);
+        combat.RecordLongTermGoal(LongTermGoals.FatalKillBonus);
+    }
+
+    /// <summary>这张牌自己打死了目标，而且目标身上没有取消斩杀的效果。</summary>
+    /// <remarks>
+    /// 和求解器 <c>CorePowerSupport.WasFatalKill</c> 同一条判据，只是那个是私有的。两点都要：
+    /// 死亡必须由这张牌造成（扫这次出牌以来的伤害记录，认卡牌来源和"目标被打死"标记），
+    /// 而且目标的每一个 Power 都允许死亡触发斩杀 —— 复活、分裂这类会把斩杀吃掉。
+    ///
+    /// <paramref name="historyStart" /> 要在攻击之前取。
+    /// </remarks>
+    public static bool WasFatalKill(CardOnPlayMirrorContext context, int historyStart)
+    {
+        if (context.CardPlay.Target is not { } target)
+            return false;
+        SimulatedCombatState combat = Combat(context);
+        bool deathTriggersFatal = combat.EffectivePowers()
+            .Where(power => power.Owner == target)
+            .All(power => power.ShouldOwnerDeathTriggerFatal());
+        if (!deathTriggersFatal)
+            return false;
+
+        foreach (CombatPredictionHistoryEntry entry in context.History.EntriesFrom(historyStart))
+        {
+            if (entry is CombatPredictionDamageReceivedEntry damage
+                && ReferenceEquals(damage.CardSource?.Original, context.Card.Original)
+                && damage.Receiver == target
+                && damage.Result.WasTargetKilled)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static void Unmirrored(CardOnPlayMirrorContext context, string what)
     {
         EngineDiagnostics.Warn($"[SolverWatcherAdapter] 未镜像：{what}");

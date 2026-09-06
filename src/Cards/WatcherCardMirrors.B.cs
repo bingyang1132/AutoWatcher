@@ -13,6 +13,9 @@ namespace SolverWatcherAdapter;
 
 internal static partial class WatcherCardMirrors
 {
+    /// <summary>勤学精进斩杀收益折到求解器的长期资源刻度上的值，与原版猎杀同档。</summary>
+    private const int LessonLearnedLongTermResourceValue = 30;
+
     public static int RegisterB(MethodMirrorRegistry<CardModel, CardOnPlayMirrorContext> r)
     {
         r.Register<WatcherFlyingSleeves>(FlyingSleeves);
@@ -130,10 +133,28 @@ internal static partial class WatcherCardMirrors
     /// 那是对主牌组的永久升级，不是战斗内升级，超出了单场战斗模拟的范围，所以只记风险。
     /// 击杀判定本身也依赖攻击前捕获的目标 Power 集合，这里一并归入未镜像。
     /// </remarks>
+    /// <summary>勤学精进：斩杀时永久升级牌组里的一张随机牌。</summary>
+    /// <remarks>
+    /// 升级哪一张超出单场战斗的范围，也不影响本场，所以不模拟。但"斩杀了没有"影响的是求解器
+    /// 该不该为了这张牌去凑最后一击，那是本场之内的决策，必须建模。按原版猎杀、饱食、贪婪之手
+    /// 同一条路记：兑现时记一笔长期资源加一个 <c>FatalKillBonus</c> 目标。
+    ///
+    /// 它消耗，所以打出去就先记一笔"已经打出了"。不斩杀的话这张牌就白扔了，求解器要能把
+    /// "从没抽到"和"当普通攻击打掉了"区分开。
+    ///
+    /// 折价 <see cref="LessonLearnedLongTermResourceValue" /> 取和猎杀一样的 30。牌组里随机一张
+    /// 永久升级，和猎杀那笔一次性收益是同一个量级；随机落在打击防御上会缩水，但那是期望值内的事。
+    ///
+    /// 一处简化：原版在牌组里没有可升级的牌时什么都不给。牌组内容不在战斗状态里，取不到，
+    /// 所以这里一律按给了算。整副牌全升满才会差，那时这张牌本来也没人留。
+    /// </remarks>
     private static void LessonLearned(WatcherLessonLearned card, CardOnPlayMirrorContext context)
     {
+        V.RecordFatalKillCardPlayed(context);
+        int historyStart = context.History.Entries.Count;
         V.Attack(context);
-        V.Unmirrored(context, $"{card.Id.Entry} 击杀时会永久升级牌组里的一张牌");
+        if (V.WasFatalKill(context, historyStart))
+            V.RecordFatalKillBonus(context, LessonLearnedLongTermResourceValue);
     }
 
     private static void LikeWater(WatcherLikeWater card, CardOnPlayMirrorContext context)

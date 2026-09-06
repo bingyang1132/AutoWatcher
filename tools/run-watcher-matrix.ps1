@@ -85,6 +85,18 @@ $cases = @(
         )
     },
     @{
+        Id = "WATCHER-LESSON-LEARNED-FATAL-KILL"
+        Tags = @("cards", "damage")
+        Why = "勤学精进斩杀时永久升级牌组里一张牌。敌人 8 血，这一刀正好斩杀，求解器要把这笔局外收益记进长期资源。"
+        Args = @(
+            "-EnemyCurrentHp", "8", "-ClearPlayerPiles",
+            "-CardsJson", (Hand @("WATCHER_LESSON_LEARNED")),
+            "-ExpectedInitialFirstActionCardId", "WATCHER_LESSON_LEARNED",
+            "-ExpectedInitialLongTermResourceValueAtLeast", "30",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
         Id = "WATCHER-DEUS-EX-MACHINA-DRAW"
         Tags = @("cards", "draw", "hooks")
         Why = "机械降神被抽到时自动打出自己、消耗、给两张奇迹。敌人 22 血：三张打击 18 点杀不掉，必须先用化智为空把它抽出来、拿两张奇迹换出第四点能量，四张打击 24 点才够。不建模就打不出第一回合击杀。"
