@@ -23,11 +23,15 @@
 
 - `BLOCK` **求解器要先发一个带扩展点的版本。** 适配层现在依赖三条尚未上游的求解器改动
   （`pr/unplanned-optional-choice-dismiss`、`pr/mod-pile-discard-choice`、
-  `pr/card-playability-mirror-coverage`），外加六处 Harmony 补丁。这些不落地，别人装上跑不起来。
+  `pr/card-playability-mirror-coverage`、`pr/third-party-strategic-effects`），外加六处 Harmony
+  补丁。这些不落地，别人装上跑不起来。其中 `pr/third-party-strategic-effects` 是以手拒之排序
+  问题的修法，没有它那张牌会被排到攻击后面、白挨一回合。
   清单里 `CombatSolver.min_version` 现在写的是 `0.29.0`，**是错的**，等有了目标版本再定。
-- `BLOCK` **0.31.1 的行为验收还没做。** 只做了编译验证。矩阵 23 条要全量跑一遍。
-- `BLOCK` **求解器的创意工坊 item id 还没拿到。** `publish/workshop.json` 的 `dependencies`
-  现在只有 RitsuLib（`3747602295`）和观者（`3747526116`）。求解器那个要从它的工坊页面 URL 里读。
+- [x] **0.31.1 的行为验收**：2026-09-06 全量跑过 23 条，22 通过。
+      `WATCHER-DEUS-EX-MACHINA-DRAW` 那一条在批量里失败、单独重跑 3 次全过；失败时机和我在
+      同一台机器上跑另一个 dotnet publish 重合，判为负载引起的抖动。**跑矩阵的时候别在同一台
+      机器上跑别的构建。**
+- `BLOCK` **以手拒之修好之后要再全量跑一次。** 改动落在 `StateEvaluation`，是跨切面的。
 
 ## 打包
 
@@ -35,11 +39,15 @@
 - [x] 创意工坊预览图 `publish/image.png`（512×512，479 KB）。
       上传器只认工作区里的 `image.png` 一个文件，其余尺寸不是必需的。
       原图缩到 1024 是 1783 KB，超 Steam 的 1 MB 上限；640 是 727 KB；选了 512 留余量
-- [x] `publish/workshop.json`（标题、正文、可见性 `private`、依赖）。
-      正文由 `publish/build-workshop-json.py` 从 `steam-description.md` 生成，别手工改 JSON
-- [ ] 上传工作区：把 `workshop.json`、`image.png`、`content/` 放进
-      `ModUploader-win-x64/AutoWatcherWorkshop/`；`content/` 里放
-      `AutoWatcher.dll` + `AutoWatcher.json` + `THIRD_PARTY_NOTICES.md`
+- [x] `publish/workshop.json`（标题、中英两份正文、可见性 `private`、依赖）。
+      正文由 `publish/build-workshop-json.py` 从 `steam-description.md` 生成，别手工改 JSON。
+      依赖三个 item id 都已填：RitsuLib `3747602295`、观者 `3747526116`、求解器 `3790899961`
+- [x] 上传工作区 `ModUploader-win-x64/AutoWatcherWorkshop/` 已建好：
+      `workshop.json` + `image.png` + `content/`（`AutoWatcher.dll`、`AutoWatcher.json`、
+      `THIRD_PARTY_NOTICES.md`）。发版前要把 `content/` 里的 DLL 换成正式版构建
+- [x] 上传器支持分语言描述。原来不支持，已给 `sts2-mod-uploader` 加 `localizations` 字段
+      （commit `9043bb8`），新 exe 已装进 `ModUploader-win-x64/`，旧的留成
+      `ModUploader.exe.bak-before-localizations`
 - [ ] 首次上传后把生成的 `mod_id.txt` 留在工作区
 - [ ] 可见性从 `private` 改 `public`（先私有传一次，自己订阅装一遍确认能加载）
 

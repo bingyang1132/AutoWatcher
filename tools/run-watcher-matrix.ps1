@@ -192,6 +192,27 @@ $cases = @(
         )
     },
     @{
+        # 以手拒之自己不给甲，甲来自"之后打中这个敌人"。所以它必须排在攻击前面才有收益，
+        # 这条锁的就是排序，不是镜像——镜像由上面两条 BLOCK-RETURN 锁着。
+        #
+        # 没有第三方战略估值登记时求解器给的顺序是「打击 打击 以手拒之」，第 1 回合 max_block=0：
+        # 打出它的瞬间格挡增量、ProjectedPlayerHp、PlayerHp、PreventionPotential 四样一样都不动，
+        # 于是被归成一张纯 ImmediateOffense，和打击同族但伤害更低，在族内代表里被压掉。
+        # 登记之后它同时进 ImmediateDefense 族，不再被压。
+        #
+        # 判据是算术的：以手拒之 MagicNumber = 2，两张打击各 1 段，
+        # 排在最前面 = 2 + 2 = 4 甲，排中间 = 2，排最后 = 0。
+        Id = "WATCHER-TALK-TO-THE-HAND-ORDERING"
+        Tags = @("hooks", "damage")
+        Why = "以手拒之要排到攻击前面才起得了甲。排在后面这一回合就是 0 甲。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", (Hand @("WATCHER_TALK_TO_THE_HAND", "WATCHER_STRIKE_P", "WATCHER_STRIKE_P")),
+            "-ExpectedInitialMaxBlockAtLeast", "4",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
         Id = "WATCHER-VIGILANCE-BLOCK"
         Tags = @("smoke", "stance")
         Why = "警戒给 8 点格挡。数值错了这条就过不去。"

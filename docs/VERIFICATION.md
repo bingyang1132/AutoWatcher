@@ -257,7 +257,7 @@ pwsh -NoProfile -File tools/run-watcher-matrix.ps1
 死亡本身求解器计价没有问题：死亡是 -1e12 的分数、节点直接终止，所以只要回合结束死亡真的建模了，
 求解器绝不会主动送死。`WATCHER-BLASPHEMY-NO-SUICIDE` 用一副赢不了的牌锁住这一点。
 
-**以手拒之起不了甲 —— 是排序，不是镜像。** 反弹格挡的镜像和钩子分发都是对的，逐条和反编译出来的
+**以手拒之起不了甲 —— 是排序，不是镜像。已修。** 反弹格挡的镜像和钩子分发都是对的，逐条和反编译出来的
 `WatcherMod.BlockReturnPower` 核对过（目标判定、施加者判定、`IsPoweredAttack`、`TotalDamage > 0`、
 受益者三级回退、`Unpowered` 不吃敏捷、不自减），`WATCHER-BLOCK-RETURN-HOOK` 把这一半钉住了。
 
@@ -273,10 +273,18 @@ pwsh -NoProfile -File tools/run-watcher-matrix.ps1
 于是它被归成一张纯 `ImmediateOffense`，和打击同族但伤害更低，在族内代表里被打击压掉，只能等打击
 打完才轮到它。
 
-**适配层修不了这条。** `StrategicEffectModel.Requirements` / `Evaluate` 是按原版 Power 类型写死的
-`switch`，没有第三方登记入口；设置估值那圈的"只看自己身上"也是硬编码。要修得动求解器：给"挂在别人
-身上、但收益归玩家"的 Power 一个登记点，让它计进 `PreventionPotential`。这属于发布前要提的扩展点
-之一。
+**修法在求解器那边。** `StrategicEffectModel.Requirements` / `Evaluate` 原来是按原版 Power 类型写死的
+`switch`，没有第三方登记入口；设置估值那圈的"只看自己身上"也是硬编码。求解器侧新增
+`StrategicEffectMirrors`：按 Power 类型登记 requirements 和估值委托，外加一个 `host` 说明这层
+Power 挂在谁身上。`StrategicEffectHost.Enemy` 换一套准入判定——层数为正、不是临时 Power、宿主
+不是玩家，不查增益减益，因为它在宿主眼里通常是减益。求解器本身不认识任何第三方类型，反弹格挡
+的估值由适配层的 `src/WatcherStrategicEffects.cs` 提供。用法和估值该往哪个方向偏，见求解器仓库的
+`docs/third-party-strategic-effects.md`。
+
+夹具 `WATCHER-TALK-TO-THE-HAND-ORDERING`：以手拒之加两张打击、3 能量，判 `max_block ≥ 4`
+（以手拒之 MagicNumber = 2，两张打击各 1 段，排最前面 = 4 甲，排中间 = 2，排最后 = 0）。
+**做过反向对照**：把 `WatcherStrategicEffects.RegisterAll()` 注释掉重新构建，这条就不过；
+加回来就过。
 
 **估值不能按攻击牌张数算。** 反弹格挡是**按伤害段数**触发的：`CombatPredictionSimulator.Attack`
 是 `for (i = 0; i < hitCount; i++) { Damage(...) }`，每段各产生一个 `DamageResult`，每个 result

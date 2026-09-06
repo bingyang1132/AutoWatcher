@@ -62,10 +62,12 @@ Eight effects are not modelled. They **never silently miscalculate** — the sol
 in red with "unmirrored effect here", so you can see it. The list is in the
 "显式记为未镜像的部分" section of [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
-There is one further known problem that **the adapter cannot fix**: the solver will not reorder
-Talk to the Hand ahead of your attacks in order to gain the block. The mirror itself is correct;
-what is broken is the solver's action classification, and fixing it needs a third-party
-registration hook on the solver side. Same document, same section.
+The Talk to the Hand ordering problem is **fixed**. The solver used to refuse to reorder it ahead
+of your attacks to gain the block; the mirror was always correct, what was broken was the solver's
+action classification. The fix adds a third-party strategic-effect registration hook on the solver
+side, so effects that sit on an enemy but pay out to the player reach the defensive classification,
+and the adapter registers the block-return power through it. This is why AutoWatcher needs a solver
+build that contains that hook — see the two channels above.
 
 ## Reporting bugs
 

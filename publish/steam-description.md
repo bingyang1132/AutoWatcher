@@ -76,8 +76,9 @@
 有 8 处效果没有建模。它们[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像
 的效果」，你看得见。具体清单在 GitHub 的核对记录里。
 
-另有一条适配层修不了的：求解器不会为了起甲把「以手拒之」排到攻击牌前面。镜像本身是对的，
-坏的是求解器的动作分类，要在求解器那边开一个第三方登记入口才能修。
+「以手拒之」的排序问题已经修好。之前求解器不会为了起甲把它排到攻击牌前面，修法是在求解器
+那边开一个第三方登记入口，让「挂在敌人身上、收益归玩家」的效果也能进防御判定。所以本 Mod
+需要含这个入口的求解器版本。
 
 [h2]报 Bug[/h2]
 
@@ -159,9 +160,10 @@ Eight effects are not modelled. They [b]never silently miscalculate[/b] — the 
 route in red with "unmirrored effect here", so you can see it. The full list is in the
 verification notes on GitHub.
 
-One further problem the adapter cannot fix: the solver will not reorder Talk to the Hand ahead of
-your attacks in order to gain the block. The mirror is correct; the solver's action
-classification is what needs a third-party registration hook.
+The Talk to the Hand ordering problem is fixed. The solver used to refuse to reorder it ahead of
+your attacks to gain the block; the fix adds a third-party registration hook on the solver side so
+that effects sitting on an enemy but paying out to the player reach the defensive classification.
+AutoWatcher therefore needs a solver build containing that hook.
 
 [h2]Reporting bugs[/h2]
 
