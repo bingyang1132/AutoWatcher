@@ -151,6 +151,12 @@ dotnet build SolverWatcherAdapter.csproj -c Release
 姿态药水的两张选择令牌也重写了这个属性，但写死是 `false`，基类回落本来就对。
 夹具 `WATCHER-SIGNATURE-MOVE-UNPLAYABLE`。
 
+机械降神被抽到时自动打出自己，落进消耗堆之后给两张奇迹 —— 也就是两点能量。按原版 `AfterCardDrawn`
+的三步镜像：只在它是被抽进手牌的那一张时触发、自动打出它、按落点判断发不发奇迹。落点判断不能
+省，原版就是按落点判的而不是按牌上的关键字判的。奇迹进手牌底部。
+夹具 `WATCHER-DEUS-EX-MACHINA-DRAW`：敌人 22 血，三张打击 18 点杀不掉，必须靠这两点能量打出
+第四张打击才够 —— 也就是说这条夹具只有在奇迹真的到手时才过。
+
 ## 测试环境要求
 
 **必须收窄 mod 集。** 你装的 LotmMod 会让求解器停在同一道门上

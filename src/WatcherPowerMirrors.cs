@@ -67,16 +67,40 @@ internal static class WatcherPowerMirrors
             sim.Effects.ApplyPower(typeof(WeakPower), enemy, power.Amount, sim.Self);
     }
 
-    /// <summary>天降神机：被抽到时自动打出自己，进放逐堆后给若干张奇迹。</summary>
+    /// <summary>机械降神：被抽到时自动打出自己，落进消耗堆之后给若干张奇迹。</summary>
     /// <remarks>
-    /// 自动打出自己这一步没法用镜像表达——它要走完整的出牌管线并观察落到哪个牌堆。整张牌的
-    /// 效果都挂在这上面，所以整体记风险。
+    /// 照原版 <c>AfterCardDrawn</c> 的三步来：只在这张牌是被抽进手牌的那一张时触发；自动打出
+    /// 它自己；打完看它落在哪个牌堆，只有落进消耗堆才发奇迹。
+    ///
+    /// 最后那个判断不能省。这张牌本身消耗，但打出去这一步会走完整的出牌管线，中途被别的效果
+    /// 改掉落点是可能的；原版就是按落点判的，不是按牌上的关键字判的。
+    ///
+    /// 奇迹按原版进手牌底部。位置要紧：进顶部会挤掉这一次抽牌之后的顺序。
+    ///
+    /// <c>IntrinsicCardHandled</c> 是求解器对"抽到的牌对自己生效"这一类的标准写法（原版虚无
+    /// 用的同一套），保证钩子重复分发时只结算一次。
     /// </remarks>
     private static void DeusExMachina(WatcherDeusExMachina card, AfterCardDrawnMirrorContext context)
     {
-        if (!ReferenceEquals(context.InitialCard, card) || card.Owner is not { } owner)
+        if (context.IntrinsicCardHandled || !context.Card.References(card))
             return;
-        Sim(context, owner).Unmirrored($"{card.Id.Entry} 被抽到时会自动打出自己并生成奇迹");
+        if (card.Owner is not { } owner)
+            return;
+        if (context.Card.GetPile(context.State)?.Type is not PileType.Hand)
+            return;
+        context.IntrinsicCardHandled = true;
+
+        context.Simulator.AutoPlay(context.Card, nestedChoiceSourceId: card.Id.Entry);
+
+        if (context.Card.GetPile(context.State)?.Type is not PileType.Exhaust)
+            return;
+
+        context.Simulator.CreateAndAddGeneratedCardsToCombat<WatcherMiracle>(
+            owner,
+            PileType.Hand,
+            card.DynamicVars["MagicNumber"].IntValue,
+            owner,
+            CardPilePosition.Bottom);
     }
 
     /// <summary>主宰现实：战斗中生成的牌自动升级。</summary>

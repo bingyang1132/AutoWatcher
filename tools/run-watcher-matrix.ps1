@@ -85,6 +85,17 @@ $cases = @(
         )
     },
     @{
+        Id = "WATCHER-DEUS-EX-MACHINA-DRAW"
+        Tags = @("cards", "draw", "hooks")
+        Why = "机械降神被抽到时自动打出自己、消耗、给两张奇迹。敌人 22 血：三张打击 18 点杀不掉，必须先用化智为空把它抽出来、拿两张奇迹换出第四点能量，四张打击 24 点才够。不建模就打不出第一回合击杀。"
+        Args = @(
+            "-EnemyCurrentHp", "22", "-ClearPlayerPiles",
+            "-CardsJson", '[{"cardId":"WATCHER_EMPTY_MIND","pile":"Hand","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Hand","count":4},{"cardId":"WATCHER_DEUS_EX_MACHINA","pile":"Draw","count":1}]',
+            "-ExpectedInitialCombatEndedTurn", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
         Id = "WATCHER-SIGNATURE-MOVE-UNPLAYABLE"
         Tags = @("cards", "hooks")
         Why = "标志性一击要手上只有它一张攻击牌才打得出。手里四张攻击、三费，最优是打三张打击共 3 个动作；把它当成随时可打的话最优会变成它加一张打击、只有 2 个动作。"
