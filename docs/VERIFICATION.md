@@ -328,12 +328,32 @@ actual_block=3`，掉 11 血。手打是「爆发+ | 停顿 | 粉碎关节+ | �
 `val == calmChoice`，但两张选项牌是两个不同的类型（`WatcherStancePotionCalmChoice` 和
 `WatcherStancePotionWrathChoice`），各只有一张，按类型判和按引用判在这里完全等价。
 
-真正卡住的是求解器没有"让搜索在 N 个结算内选项里挑一个、效果由 mod 自己施加"的原语。
-`ResolvePileDiscardChoice` 只能表达"丢哪几张"，因为弃牌这个动作是求解器自己执行的；
-进平静还是进愤怒它执行不了。要修得再开一个扩展点。
+真正卡住的是**第三方登记不进去**，不是没有原语。原语是现成的：药水的选牌分支走
+`PotionChoiceSupport`，用 `CardChoiceSpec` 加挂起选择，原版那四张三选一药水就是
+`PlanChoiceEffect.GenerateToHand` 配 `PileType.None`，形状和这里要的一模一样。
 
-顺带：这 7 处未建模选择里，姿态药水是**最便宜的一条**——它的选项根本不涉及牌，就是两个固定
-结果。别的六条都要在牌上做搜索。
+挡住的是三个写死的开关：
+
+```csharp
+public static bool RequiresChoice(PotionModel potion)
+    => GeneratesCardChoice(potion)          // AttackPotion / SkillPotion / PowerPotion / ColorlessPotion
+        || potion is Ashwater or DropletOfPrecognition or GamblersBrew
+           or LiquidMemories or TouchOfInsanity;
+```
+
+第三方药水在这里永远是 `false`，于是求解器根本不为它开选择分支；`GetSpec` 和 `Apply` 同样是
+封闭 switch，默认分支直接抛。也就是说 `PotionOnUseMirrors` 这个钩子触发的时候，"要不要开分支"
+早就已经被否决了，适配层再怎么写也够不着。
+
+要修的是给这三个开关加第三方登记表，和 `pr/third-party-strategic-effects` 是同一个形状。
+
+顺带两点：
+
+- 这 7 处未建模选择里，姿态药水是**最便宜的一条**——它的选项根本不涉及牌，就是两个固定结果。
+- 观者一共只有 3 个药水（`Ambrosia`、`BottledMiracle`、`StancePotion`，按 Watcher.dll 的元数据
+  数过），三个都已经注册了镜像。**没有漏检的药水**：没有玩家选择的两个走
+  `PotionOnUseMirrors` 就够了、也确实是对的，卡住的只有带选择的这一个。规则是通用的——
+  任何 mod 的药水，不带选择的能用镜像补上，带选择的都会撞上这道封闭开关。
 
 ## 强度验收标准
 

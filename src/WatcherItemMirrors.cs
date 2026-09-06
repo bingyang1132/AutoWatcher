@@ -119,9 +119,17 @@ internal static class WatcherItemMirrors
     /// 是 `val == calmChoice`，但两张选项牌是两个不同的类型（`WatcherStancePotionCalmChoice` 和
     /// `WatcherStancePotionWrathChoice`），各只有一张，按类型判和按引用判在这里完全等价。
     ///
-    /// 真正卡住的是另一件事：求解器没有"让搜索在 N 个结算内选项里挑一个、效果由 mod 自己施加"的
-    /// 原语。`ResolvePileDiscardChoice` 那条路只能表达"丢哪几张"，弃牌这个动作是求解器自己执行的；
-    /// 进平静还是进愤怒它执行不了。要修得再给求解器开一个扩展点。
+    /// 真正卡住的是第三方登记不进去。原语是有的：药水的选牌分支走 `PotionChoiceSupport`，
+    /// 用 `CardChoiceSpec` 加挂起选择，原版的攻击/技能/能力/无色四张三选一药水就是
+    /// `PlanChoiceEffect.GenerateToHand` 配 `PileType.None`，形状和这里要的一模一样。
+    ///
+    /// 挡住的是那三个写死的开关：`RequiresChoice` 是对原版药水类型的封闭类型判定
+    /// （四张生成牌的，加 Ashwater / DropletOfPrecognition / GamblersBrew / LiquidMemories /
+    /// TouchOfInsanity），第三方药水永远返回 false，于是求解器根本不为它开选择分支；
+    /// `GetSpec` 和 `Apply` 同样是封闭 switch，默认分支直接抛。
+    ///
+    /// 也就是说这个钩子（`PotionOnUseMirrors`）触发的时候，"要不要开分支"早就已经被否决了。
+    /// 要修的是给那三个开关加一个第三方登记表，和战略估值那条是同一个形状。
     ///
     /// 代价是实测过的：2026-09-06 鬼祟珊瑚群那一场，求解器第 1 回合 `max_block=14 actual_block=3`、
     /// 掉 11 血；手打是「爆发+ 进愤怒 → 停顿 3+9=12 甲 → 如水 → 药水选平静退出愤怒」，如水在回合
