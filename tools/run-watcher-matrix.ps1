@@ -132,6 +132,23 @@ $cases = @(
         )
     },
     @{
+        # 反弹格挡挂在敌人身上，不在自己身上。求解器的 Beam 只给"自己身上的增益"记设置价值，
+        # 所以这条只能靠"打出去之后确实起了甲"来验，验的是钩子分发，不是估值。
+        # 3 点能量：以手拒之 1 费（5 伤害 + 给目标挂 2 层反弹）、两张打击各 1 费。
+        # 两次攻击各触发一次 -> 4 点格挡。手上没有任何别的格挡来源，所以 4 是纯粹来自它。
+        Id = "WATCHER-TALK-TO-THE-HAND-BLOCK"
+        Tags = @("cards", "hooks")
+        Why = "以手拒之给目标挂反弹格挡，之后每次攻击它自己起 2 甲。钩子没分发到就是 0 甲。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
+            "-CardsJson", (Hand @(
+                "WATCHER_TALK_TO_THE_HAND", "WATCHER_STRIKE_P", "WATCHER_STRIKE_P")),
+            "-ExpectedInitialFirstActionCardId", "WATCHER_TALK_TO_THE_HAND",
+            "-ExpectedInitialMaxBlockAtLeast", "4",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
         Id = "WATCHER-VIGILANCE-BLOCK"
         Tags = @("smoke", "stance")
         Why = "警戒给 8 点格挡。数值错了这条就过不去。"
