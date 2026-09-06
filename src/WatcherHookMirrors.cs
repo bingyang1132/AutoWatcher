@@ -6,7 +6,7 @@ using CombatSolver.Engine.Common;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.Card;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 观者自己的 Power 重写了、而求解器确实会分发的那些钩子的镜像。
@@ -63,7 +63,7 @@ internal static class WatcherHookMirrors
             state.ProphecyPlaysThisTurn++;
             // 原版在这里还会结算预言牌的终局效果，那部分没有镜像。
             EngineDiagnostics.Warn(
-                $"[SolverWatcherAdapter] 未镜像：{played.Id.Entry} 作为预言牌打出后的终局结算");
+                $"[AutoWatcher] 未镜像：{played.Id.Entry} 作为预言牌打出后的终局结算");
             context.History.RecordRisk(PredictionRiskReason.MethodMirrorIncomplete);
         }
 

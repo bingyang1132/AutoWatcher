@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Security.Cryptography;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 这个适配层是针对下面这些确切版本逐个动词核对过的。

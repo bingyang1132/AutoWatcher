@@ -8,9 +8,9 @@ using MegaCrit.Sts2.Core.ValueProps;
 using CombatSolver;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
-using SV = SolverWatcherAdapter.WatcherSimVerbs;
+using SV = AutoWatcher.WatcherSimVerbs;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 玩家回合结束时观者那些 <c>AfterSideTurnEnd</c> 效果的补丁。

@@ -5,9 +5,9 @@ using CombatSolver.Engine.InCombat.Mirrors.Hooks.Card;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.TurnEnd;
 using CombatSolver.Engine.InCombat.Mirrors.Potions.OnUse;
 using WatcherMod;
-using SV = SolverWatcherAdapter.WatcherSimVerbs;
+using SV = AutoWatcher.WatcherSimVerbs;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 观者的 9 个遗物和 3 个药水。

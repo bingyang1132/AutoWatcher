@@ -5,7 +5,7 @@ using CombatSolver;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 让求解器认得观者的额外回合。

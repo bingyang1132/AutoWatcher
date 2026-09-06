@@ -16,7 +16,7 @@
     pwsh -NoProfile -File tools\run-watcher-matrix.ps1 -Only WATCHER-CALM-EXIT-ENERGY
 
   前提：
-    1. mods/ 里只留 CombatSolver、Watcher、SolverWatcherAdapter 三个。
+    1. mods/ 里只留 CombatSolver、Watcher、AutoWatcher 三个。
        其他 gameplay mod（尤其 LotmMod）会让求解器停在第三方检查上，与观者无关。
     2. 改过 mod 之后先 Stop-Process -Name SlayTheSpire2，否则 harness 会复用旧进程，
        测到的是旧的加载状态。本脚本开头会自动杀，并且每条用例都用独立进程（-ExitOnComplete）。

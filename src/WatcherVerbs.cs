@@ -11,7 +11,7 @@ using CombatSolver.Engine.InCombat.Mirrors.Cards.OnPlay;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 观者所有牌共用的效果动词。
@@ -343,14 +343,14 @@ internal static class WatcherVerbs
 
     public static void Unmirrored(CardOnPlayMirrorContext context, string what)
     {
-        EngineDiagnostics.Warn($"[SolverWatcherAdapter] 未镜像：{what}");
+        EngineDiagnostics.Warn($"[AutoWatcher] 未镜像：{what}");
         context.History.RecordRisk(PredictionRiskReason.MethodMirrorIncomplete);
     }
 
     /// <summary>声明这一处需要玩家在结算中做选择，求解器的搜索还没有为它开分支。</summary>
     public static void PlayerChoice(CardOnPlayMirrorContext context, string what)
     {
-        EngineDiagnostics.Warn($"[SolverWatcherAdapter] 未建模的结算内选择：{what}");
+        EngineDiagnostics.Warn($"[AutoWatcher] 未建模的结算内选择：{what}");
         context.History.RecordRisk(PredictionRiskReason.UnresolvedPlayerChoice);
     }
 }

@@ -8,7 +8,7 @@ using CombatSolver.Engine.InCombat.Mirrors.Cards.OnPlay;
 using STS2RitsuLib;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 把观者的牌与姿态教给战斗路线求解器。本 mod 不改变任何游戏行为。
@@ -21,7 +21,7 @@ namespace SolverWatcherAdapter;
 [ModInitializer(nameof(Initialize))]
 public static class Entry
 {
-    public const string ModId = "SolverWatcherAdapter";
+    public const string ModId = "AutoWatcher";
 
     private static Logger? _logger;
 

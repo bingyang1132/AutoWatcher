@@ -1,7 +1,7 @@
 using CombatSolver.Engine.InCombat.Mirrors.Cards.OnPlay;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 观者初始牌组的 OnPlay 镜像。

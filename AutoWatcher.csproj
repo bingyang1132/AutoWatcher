@@ -7,8 +7,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>true</ImplicitUsings>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <RootNamespace>SolverWatcherAdapter</RootNamespace>
-    <AssemblyName>SolverWatcherAdapter</AssemblyName>
+    <RootNamespace>AutoWatcher</RootNamespace>
+    <AssemblyName>AutoWatcher</AssemblyName>
     <Version>0.1.0</Version>
 
     <SteamRoot Condition="'$(SteamRoot)' == '' and '$(OS)' == 'Windows_NT' and Exists('D:/Steam')">D:/Steam</SteamRoot>
@@ -23,7 +23,7 @@
     <CombatSolverDir Condition="'$(CombatSolverDir)' == ''">$(Sts2Dir)/mods/CombatSolver</CombatSolverDir>
     <WatcherDir Condition="'$(WatcherDir)' == ''">$(Sts2Dir)/mods/Watcher</WatcherDir>
 
-    <ModOutputDir>$(Sts2Dir)/mods/SolverWatcherAdapter</ModOutputDir>
+    <ModOutputDir>$(Sts2Dir)/mods/AutoWatcher</ModOutputDir>
     <CopyModOnBuild Condition="'$(CopyModOnBuild)' == ''">true</CopyModOnBuild>
     <NoWarn>$(NoWarn);CS0436</NoWarn>
   </PropertyGroup>
@@ -70,6 +70,6 @@
   <Target Name="CopyMod" AfterTargets="Build" Condition="'$(CopyModOnBuild)' == 'true'">
     <MakeDir Directories="$(ModOutputDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModOutputDir)" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/SolverWatcherAdapter.json" DestinationFolder="$(ModOutputDir)" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/AutoWatcher.json" DestinationFolder="$(ModOutputDir)" />
   </Target>
 </Project>

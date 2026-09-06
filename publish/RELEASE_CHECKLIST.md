@@ -2,42 +2,68 @@
 
 状态记于 2026-09-06。勾掉的是已完成，`BLOCK` 是硬阻塞。
 
+## 已定下来的
+
+| 项 | 值 |
+|---|---|
+| 中文名 | 自动观者 |
+| 英文名 | AutoWatcher |
+| 副标题 | 自动战斗求解器 - 观者 mod 适配 |
+| `mod id` / 程序集 / 命名空间 / mods 目录 | `AutoWatcher` |
+| 创意工坊标题 | `自动观者 \| AutoWatcher` |
+| GitHub 仓库 | `bingyang1132/AutoWatcher` |
+| 授权 | MIT |
+| 依赖 | 自动战斗求解器、观者（Boninall）、RitsuLib |
+
+**两条发布线。** 创意工坊版对标创意工坊上的求解器 + 观者；GitHub 版对标我们自己的开发版
+求解器。GitHub 的每个 release 放两样：本 Mod 的构建产物，和它对应的**那一个**求解器版本的
+链接。文案里已经写明求解器在持续开发、本 Mod 跟进，并给了两个 GitHub 链接。
+
 ## 硬阻塞
 
 - `BLOCK` **求解器要先发一个带扩展点的版本。** 适配层现在依赖三条尚未上游的求解器改动
   （`pr/unplanned-optional-choice-dismiss`、`pr/mod-pile-discard-choice`、
   `pr/card-playability-mirror-coverage`），外加六处 Harmony 补丁。这些不落地，别人装上跑不起来。
   清单里 `CombatSolver.min_version` 现在写的是 `0.29.0`，**是错的**，等有了目标版本再定。
-- `BLOCK` **0.31.1 的行为验收还没做。** 只做了编译验证。矩阵 22 条要全量跑一遍。
+- `BLOCK` **0.31.1 的行为验收还没做。** 只做了编译验证。矩阵 23 条要全量跑一遍。
+- `BLOCK` **求解器的创意工坊 item id 还没拿到。** `publish/workshop.json` 的 `dependencies`
+  现在只有 RitsuLib（`3747602295`）和观者（`3747526116`）。求解器那个要从它的工坊页面 URL 里读。
 
 ## 打包
 
 - [x] 图标 `publish/icon.png`（1254×1254，作者自制）
-- [ ] 创意工坊要几种尺寸的图（模板里 `image.png` 是 467×467，另有 `icon.jpg` / `profile.jpg`）。
-      本机没有图像处理工具（无 ImageMagick / PIL），缩放要么你来，要么装一个
-- [ ] **名字要定**：图标文件叫 `AutoWatcher`，清单里现在是 `SolverWatcherAdapter` /
-      「观者求解器适配」。两个名字得统一，创意工坊标题、GitHub 仓库名、`mod id` 都跟着它
-- [ ] `workshop.json`：标题、描述、可见性、依赖项（要填 CombatSolver 和 Watcher 的
-      创意工坊 item id，不是 mod id）
-- [ ] `content/` 目录：`SolverWatcherAdapter.dll` + `SolverWatcherAdapter.json`
+- [x] 创意工坊预览图 `publish/image.png`（512×512，479 KB）。
+      上传器只认工作区里的 `image.png` 一个文件，其余尺寸不是必需的。
+      原图缩到 1024 是 1783 KB，超 Steam 的 1 MB 上限；640 是 727 KB；选了 512 留余量
+- [x] `publish/workshop.json`（标题、正文、可见性 `private`、依赖）。
+      正文由 `publish/build-workshop-json.py` 从 `steam-description.md` 生成，别手工改 JSON
+- [ ] 上传工作区：把 `workshop.json`、`image.png`、`content/` 放进
+      `ModUploader-win-x64/AutoWatcherWorkshop/`；`content/` 里放
+      `AutoWatcher.dll` + `AutoWatcher.json` + `THIRD_PARTY_NOTICES.md`
+- [ ] 首次上传后把生成的 `mod_id.txt` 留在工作区
+- [ ] 可见性从 `private` 改 `public`（先私有传一次，自己订阅装一遍确认能加载）
 
-## 清单（`SolverWatcherAdapter.json`）
+## 清单（`AutoWatcher.json`）
 
+- [x] `id` = `AutoWatcher`，`name` = `自动观者`
+- [x] `affects_gameplay: false` —— 这条要保持，适配层不改任何游戏行为
 - [ ] `CombatSolver.min_version` 改成真正含扩展点的那一版
 - [ ] `Watcher.min_version` 复核（现写 `0.9.25`，和钉死的哈希是同一版）
 - [ ] `version` 从 `0.1.0` 抬到发布版本号
-- [x] `affects_gameplay: false` —— 这条要保持，适配层不改任何游戏行为
 
 ## GitHub 仓库
 
-- [ ] 建仓库（现在本地无 remote）
-- [ ] 面向用户的 `README.md`。现在这份 326 行是内部核对记录，
-      建议移到 `docs/VERIFICATION.md`，另写一份短的
-- [ ] `LICENSE`。建议 MIT，和大多数 STS2 mod 一致
-- [ ] `THIRD_PARTY_NOTICES.md`：说明 publicizer 的用法，以及对 sts2 / CombatSolver / Watcher
-      三个程序集的引用关系
-- [ ] `.gitignore` 复核，确认 `local.props`、`bin`、`obj` 都不进仓库
-- [ ] **不要**把钉死的观者二进制放进仓库，只留哈希
+- [x] 面向用户的 `README.md`（中文）和 `README.en.md`（英文），互相链接
+- [x] 原来那份 326 行的核对记录移到 `docs/VERIFICATION.md`
+- [x] `LICENSE`（MIT）
+- [x] `THIRD_PARTY_NOTICES.md`：publicizer 的用法，以及对 sts2 / CombatSolver / Watcher /
+      RitsuLib 四个程序集的引用关系
+- [x] `.gitignore` 复核：`local.props`、`bin`、`obj`、`.godot` 都不进仓库；仓库里没有任何
+      第三方二进制
+- [ ] 建远端仓库（现在本地无 remote），名字 `AutoWatcher`
+- [ ] 本地目录还叫 `SolverWatcherAdapter`。要不要跟着改成 `AutoWatcher` 由你定 ——
+      改了会动到无头 harness 的按路径哈希的实例目录
+- [ ] Release 说明模板：写清这一版对标哪个求解器版本，并给出那一版的下载链接
 
 ## 发布前的加固
 
@@ -45,4 +71,4 @@
       自检要核对用到的那几个方法签名和两个私有字段还在不在，不在就干净地拒绝加载
 - [ ] 求解器的**严格版本相等**换成最低版本
 - [ ] 决定 8 处已知缺口哪些随版本发。我的看法是全部可以发 —— 没有一处会静默算错，
-      那正是红字的用途 —— 但创意工坊页面必须写清楚
+      那正是红字的用途 —— 创意工坊页面和两份 README 都已经写清楚了

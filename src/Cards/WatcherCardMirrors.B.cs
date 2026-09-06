@@ -6,10 +6,10 @@ using CombatSolver.Engine.Common.Mirrors;
 using CombatSolver.Engine.InCombat.Mirrors.Cards.OnPlay;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
-using V = SolverWatcherAdapter.WatcherVerbs;
-using S = SolverWatcherAdapter.WatcherStanceVerbs;
+using V = AutoWatcher.WatcherVerbs;
+using S = AutoWatcher.WatcherStanceVerbs;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 internal static partial class WatcherCardMirrors
 {

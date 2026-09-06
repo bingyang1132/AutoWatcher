@@ -7,7 +7,7 @@ using CombatSolver.Engine.Common;
 using CombatSolver.Engine.InCombat.Mirrors.Cards.OnPlay;
 using CombatSolver.Engine.InCombat.Simulation;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 从任意一种镜像上下文里提取出动词层需要的那几样东西。
@@ -72,14 +72,14 @@ internal readonly struct WatcherSim
     /// <summary>声明这一处效果没有镜像。求解器会显示成红色的未镜像，而不是静默算错。</summary>
     public void Unmirrored(string what)
     {
-        EngineDiagnostics.Warn($"[SolverWatcherAdapter] 未镜像：{what}");
+        EngineDiagnostics.Warn($"[AutoWatcher] 未镜像：{what}");
         History.RecordRisk(PredictionRiskReason.MethodMirrorIncomplete);
     }
 
     /// <summary>声明这一处需要玩家在结算中做选择，求解器的搜索还没有为它开分支。</summary>
     public void PlayerChoice(string what)
     {
-        EngineDiagnostics.Warn($"[SolverWatcherAdapter] 未建模的结算内选择：{what}");
+        EngineDiagnostics.Warn($"[AutoWatcher] 未建模的结算内选择：{what}");
         History.RecordRisk(PredictionRiskReason.UnresolvedPlayerChoice);
     }
 }

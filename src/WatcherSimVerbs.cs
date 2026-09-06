@@ -6,7 +6,7 @@ using CombatSolver.Engine.Common;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 不依赖卡牌上下文的效果动词。卡牌、遗物、药水共用。

@@ -1,7 +1,7 @@
 using System.Reflection;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 加载期校验适配层的前提是否成立。不成立就整体不注册。

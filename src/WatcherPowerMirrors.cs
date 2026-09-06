@@ -12,9 +12,9 @@ using CombatSolver.Engine.InCombat.Mirrors.Hooks.Damage;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.TurnEnd;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
-using SV = SolverWatcherAdapter.WatcherSimVerbs;
+using SV = AutoWatcher.WatcherSimVerbs;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 观者的 Power 重写了、而求解器确实会分发的那些钩子的镜像。

@@ -5,7 +5,7 @@ using CombatSolver.Engine.Common;
 using CombatSolver.Engine.InCombat.Mirrors.Cards;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 观者里带"什么时候才打得出"条件的牌。

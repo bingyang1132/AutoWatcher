@@ -9,7 +9,7 @@ using CombatSolver.Engine.InCombat.Mirrors.Cards.OnPlay;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 姿态切换在模拟里的等价实现。对应 <c>WatcherCombatHelper.ChangeStance&lt;T&gt;</c>。

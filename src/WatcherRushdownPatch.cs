@@ -6,7 +6,7 @@ using CombatSolver.Engine.Common;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 一张牌结算完、离开出牌堆之后，把凌波微步欠下的抽牌补上。

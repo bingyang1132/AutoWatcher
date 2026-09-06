@@ -6,7 +6,7 @@ using CombatSolver.Engine.Common;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
 
-namespace SolverWatcherAdapter;
+namespace AutoWatcher;
 
 /// <summary>
 /// 手牌保留时那些逐次增长的数值。
