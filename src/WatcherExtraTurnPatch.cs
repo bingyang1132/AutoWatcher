@@ -26,10 +26,19 @@ internal static class WatcherExtraTurnPatch
     public static MethodInfo ResolvePrepareTarget()
         => AccessTools.Method(
                typeof(SimulatedCombatState),
-               nameof(SimulatedCombatState.PrepareExtraPlayerTurn))
+               nameof(SimulatedCombatState.TryPrepareExtraPlayerTurn))
            ?? throw new MissingMethodException(
                nameof(SimulatedCombatState),
-               nameof(SimulatedCombatState.PrepareExtraPlayerTurn));
+               nameof(SimulatedCombatState.TryPrepareExtraPlayerTurn));
+
+    /// <summary>部署时判断"结束回合安不安全"走的是另一条，也得补，否则实机会和搜索对不上。</summary>
+    public static MethodInfo ResolveLivePrepareTarget()
+        => AccessTools.Method(
+               typeof(SimulatedCombatState),
+               nameof(SimulatedCombatState.TryPrepareLiveExtraPlayerTurn))
+           ?? throw new MissingMethodException(
+               nameof(SimulatedCombatState),
+               nameof(SimulatedCombatState.TryPrepareLiveExtraPlayerTurn));
 
     public static MethodInfo ResolveConsumeTarget()
         => AccessTools.Method(
@@ -39,13 +48,28 @@ internal static class WatcherExtraTurnPatch
                nameof(SimulatedCombatState),
                nameof(SimulatedCombatState.ConsumeExtraTurnSources));
 
+    /// <summary>
+    /// 两条准备额外回合的入口共用这一个后置：形参名一致（<c>player</c> / <c>extraTurn</c>），
+    /// Harmony 按名字绑定，所以一份就够。
+    /// </summary>
+    /// <remarks>
+    /// 0.31.1 把 <c>PrepareExtraPlayerTurn</c> 拆成了 <c>TryPrepareExtraPlayerTurn</c> 和
+    /// <c>TryPrepareLiveExtraPlayerTurn</c>，返回值的含义也换了：以前 <c>__result</c> 就是
+    /// "有没有额外回合"，现在它是"这次结算成不成功"，额外回合改由 <c>extraTurn</c> 出参给。
+    /// 名字恰好一起改了，所以我们撞到的是编译错误而不是静默反义——这正是要把它换成正经扩展点的理由。
+    ///
+    /// 结算失败（还有待处理的选择）时不改出参，让求解器自己走它的失败路径。
+    /// </remarks>
     public static void PreparePostfix(
         SimulatedCombatState __instance,
         Player player,
-        ref bool __result)
+        bool __result,
+        ref bool extraTurn)
     {
+        if (!__result)
+            return;
         if (__instance.GetAmount<WatcherExtraTurnPower>(player.Creature) > 0)
-            __result = true;
+            extraTurn = true;
     }
 
     /// <summary>

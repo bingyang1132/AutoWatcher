@@ -20,12 +20,18 @@ internal static class PinnedTargets
 
     /// <summary>核对适配层时所针对的求解器版本。</summary>
     /// <remarks>
-    /// 2026-09-05 从 <c>0.29.0</c> 抬到 <c>0.30.0</c>。上游 <c>f63c57c..b04d3ec</c> 这 26 个提交里，
-    /// <c>src/</c> 只动了 <c>CombatBugReportExporter.cs</c> 和 <c>UnattendedTestRunner.cs</c>，
-    /// 适配层用到的镜像注册表、模拟状态和选择通道一行没改，所以这次是纯版本号跟进，
-    /// 不需要重新逐个动词核对。
+    /// 2026-09-06 从 <c>0.30.0</c> 抬到 <c>0.31.1</c>。这一次**不是**纯版本号跟进：上游把我们的
+    /// #15 #18 #40 #41 #46 #47 一起合了，还合了 #43 的战前预测 API，<c>cd55cee..0552b33</c> 在
+    /// 适配层直接依赖的面上动了 64 个文件、约 1700 行。
+    ///
+    /// 已经撞到一次真实断裂：<c>SimulatedCombatState.PrepareExtraPlayerTurn</c> 被拆成
+    /// <c>TryPrepareExtraPlayerTurn</c> 和 <c>TryPrepareLiveExtraPlayerTurn</c>，返回值语义也变了。
+    /// 名字恰好一起改了，所以我们撞到的是编译错误；要是只改语义不改名字，就是静默反义。
+    ///
+    /// 抬版本号只挡得住编译期断裂。行为漂移要靠 <c>tools/run-watcher-matrix.ps1</c> 全量跑一遍，
+    /// 那才是这次跟进的验收条件。
     /// </remarks>
-    public static readonly Version CombatSolverVersion = new(0, 30, 0, 0);
+    public static readonly Version CombatSolverVersion = new(0, 31, 1, 0);
 
     public static string? TryComputeSha256(Assembly assembly)
     {
