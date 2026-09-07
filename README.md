@@ -18,7 +18,7 @@
 | 观者（Watcher，作者 Boninall） | 0.9.25 起 | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
 | RitsuLib | — | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
 
-**版本不对会怎样。**：
+**版本不对会怎样：**
 
 - 求解器低于 0.32.0，或者缺了某个登记入口 → 本 Mod **干净地拒绝加载**，日志里写明缺什么、
   要你去哪拿新版，一个镜像都不注册。求解器会照常停在它自己那道第三方检查上。

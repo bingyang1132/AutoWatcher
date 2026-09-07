@@ -23,7 +23,7 @@
 
 ---
 
-让[b]自动战斗求解器[/b]看懂[b]观者[/b]。
+让[b]杀戮尖塔2自动战斗求解器[/b]适用于[b]观者[/b]。
 
 求解器默认拒绝第三方角色 Mod，装上观者之后会直接停在「检测到不兼容的第三方 Mod」。
 装上本 Mod 之后，求解器不但能跑，还能真正理解观者的牌、姿态和额外回合。
@@ -53,7 +53,7 @@
 
 [list]
 [*][b]创意工坊版[/b]，也就是你现在看的这个 —— 对标求解器的[b]发布版[/b]（0.32.0 起）。
-订阅即可。绝大多数人用这个就行。
+订阅即可。普通情况用这个就行。
 [*][b]GitHub 版[/b] —— 对标某一个确定的求解器版本，可能是还没发布的开发版。每个 release 会
 写明它对标哪一个求解器版本并给出链接。
 [/list]
@@ -68,11 +68,11 @@
 
 [list]
 [*][b]观者的全部 100 个卡牌类型[/b]逐个核对镜像，按反编译出的实现写，不是照着卡面文字猜
-[*][b]四种姿态[/b]的进入、退出、伤害倍率和能量收支，以及心之堡垒、紫莲花、疾风连打这些连带效果
-[*][b]预视[/b]是真正的搜索分支：丢哪几张由求解器自己搜，不再每次预视都触发一次重算
-[*][b]额外回合[/b]（跳跃）、手牌保留、回合开始与结束的各类钩子
-[*][b]红蓝无限[/b]：凌波微步的进入愤怒抽牌已建模，求解器能认出并展开这条循环
-[*][b]跨战斗收益[/b]：勤学精进的斩杀升级会被算进长期价值
+[*][b]四种姿态[/b]的进入、退出、伤害倍率和能量收支，以及心灵堡垒、疾风连击这些连带效果
+[*][b]预视[/b]是真正的搜索分支：丢哪几张由求解器自己搜
+[*][b]额外回合[/b]（腾跃）、手牌保留、回合开始与结束的各类钩子
+[*][b]红蓝无限[/b]：🐯😡🥶😡🥶😡🥶😡🥶😡🥶😡🥶
+[*][b]跨战斗收益[/b]：勤学精进的斩杀升级和许愿会被算进长期价值
 [*]9 个遗物、3 个药水、14 个 Power 钩子，以及三处求解器没有注册表、只能用 Harmony 补的位置
 [/list]
 
@@ -138,7 +138,7 @@ changes, the adapter has to be brought back in line. Hence two channels:
 
 [list]
 [*][b]Steam Workshop[/b] — this page. Targets [b]released[/b] solver builds (0.32.0 and up).
-Just subscribe. This is the one most people want.
+Just subscribe. This is the one you normally want.
 [*][b]GitHub[/b] — targets one specific solver version, possibly a development build. Every
 release states which solver version it was built against and links to it.
 [/list]
@@ -156,14 +156,14 @@ The solver on GitHub: https://github.com/Torch1230/CombatSolver
 [*][b]All 100 Watcher card types[/b] mirrored one by one, written against the decompiled
 implementation rather than guessed from the card text
 [*][b]All four stances[/b]: entry, exit, damage multipliers, energy, plus knock-on effects from
-Mental Fortress, Violet Lotus and Rushdown
+Mental Fortress and Flurry of Blows
 [*][b]Scry as a real search branch[/b]: which cards to discard is something the solver searches,
 instead of forcing a replan on every scry
 [*][b]Extra turns[/b] (Vault), card retain, and the various turn-start / turn-end hooks
-[*][b]The Rushdown infinite[/b]: the draw-on-entering-Wrath is modelled, so the solver recognises
-and expands the loop
-[*][b]Cross-combat value[/b]: the deck upgrade from Lesson Learned's execute counts toward
-long-term value
+[*][b]The Wrath/Calm infinite[/b]: the draw-on-entering-Wrath is modelled, so the solver
+recognises and expands the loop
+[*][b]Cross-combat value[/b]: the deck upgrade from Lesson Learned's execute, and Wish's gold,
+count toward long-term value
 [*]9 relics, 3 potions, 14 power hooks, plus three sites the solver has no registry for
 [/list]
 
