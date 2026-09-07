@@ -53,18 +53,24 @@
     <Error Condition="!Exists('$(WatcherDir)/Watcher.dll')" Text="找不到 $(WatcherDir)/Watcher.dll。请把钉死的观者 mod 复制到游戏 mods 目录。" />
   </Target>
 
-  <!-- 观者是不可变的第三方产物，按哈希钉死。哈希不符就编译失败，不许静默漂移。 -->
+  <!--
+    针对哪一份观者核对过，只在构建时提醒，不再让构建失败。
+    以前这里是 Error：哈希一变就编译不过，逼着重新核对。开发期那是对的，但发布之后
+    观者每次更新都会让所有想自己构建的人卡住，而运行期已经有结构自检兜底
+    （src/AdapterSelfCheck.cs：低于版本下限或缺成员就干净地拒绝加载）。
+    所以这里降成 Warning：告诉你"你正在对着一份没核对过的观者构建"，然后放你过去。
+  -->
   <Target Name="VerifyWatcherHash" AfterTargets="ValidatePinnedDependencies">
     <GetFileHash Files="$(WatcherDir)/Watcher.dll" Algorithm="SHA256" HashEncoding="hex">
       <Output TaskParameter="Hash" PropertyName="ActualWatcherHash" />
     </GetFileHash>
-    <Error Condition="'$(ActualWatcherHash.ToLowerInvariant())' != '$(PinnedWatcherDllSha256)'"
-           Text="观者 DLL 哈希不符。钉死的是 $(PinnedWatcherDllSha256)，实际是 $(ActualWatcherHash.ToLowerInvariant())。适配层是针对钉死版本写的，换版本必须重新核对每一个动词，不要绕过这个检查。" />
+    <Warning Condition="'$(ActualWatcherHash.ToLowerInvariant())' != '$(VerifiedWatcherDllSha256)'"
+             Text="正在对着一份没有逐条核对过的观者构建。核对过的是 $(VerifiedWatcherDllSha256)，实际是 $(ActualWatcherHash.ToLowerInvariant())。结构自检仍然会在加载时把关，但数值和语义的漂移它抓不到——换版本请重新核对每一个动词，并更新 src/PinnedTargets.cs。" />
   </Target>
 
   <PropertyGroup>
-    <!-- 观者 v0.9.25 (Workshop 3747526116)，2026-09-04 钉死 -->
-    <PinnedWatcherDllSha256>9b6d6b8806e37b07a83576fef766a07aa42fc642168fa2c3e58e148c6f377733</PinnedWatcherDllSha256>
+    <!-- 观者 v0.9.25 (Workshop 3747526116)，2026-09-04 逐条核对 -->
+    <VerifiedWatcherDllSha256>9b6d6b8806e37b07a83576fef766a07aa42fc642168fa2c3e58e148c6f377733</VerifiedWatcherDllSha256>
   </PropertyGroup>
 
   <Target Name="CopyMod" AfterTargets="Build" Condition="'$(CopyModOnBuild)' == 'true'">

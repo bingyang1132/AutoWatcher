@@ -295,7 +295,7 @@ internal static class WatcherVerbs
     /// 消耗，所以只记兑现，不记打出。
     /// </remarks>
     public static void RecordFatalKillCardPlayed(CardOnPlayMirrorContext context)
-        => Combat(context).RecordLongTermGoalCardPlayed(LongTermGoals.FatalKillBonus);
+        => SolverCompat.RecordFatalKillGoalCardPlayed?.Invoke(Combat(context));
 
     /// <summary>斩杀兑现了一笔带出本场的收益。</summary>
     /// <param name="value">
@@ -306,7 +306,8 @@ internal static class WatcherVerbs
     {
         SimulatedCombatState combat = Combat(context);
         combat.RecordLongTermResource(value);
-        combat.RecordLongTermGoal(LongTermGoals.FatalKillBonus);
+        // 目标标志位只有开发版求解器才有，没有也不影响上面那笔收益的计价。见 SolverCompat。
+        SolverCompat.RecordFatalKillGoal?.Invoke(combat);
     }
 
     /// <summary>这张牌自己打死了目标，而且目标身上没有取消斩杀的效果。</summary>
