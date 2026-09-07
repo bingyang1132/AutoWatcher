@@ -2,7 +2,9 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
+using CombatSolver.Engine.Common;
 using CombatSolver.Engine.Common.Mirrors;
+using CombatSolver.Engine.InCombat.Extensions;
 using CombatSolver.Engine.InCombat.Mirrors.Cards.OnPlay;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
@@ -63,8 +65,49 @@ internal static partial class WatcherCardMirrors
             V.GainEnergy(context, card.DynamicVars.Energy.BaseValue);
     }
 
+    /// <summary>从三张**其他角色**的攻击牌里选一张加入手牌，升级后那张牌本回合免费。</summary>
+    /// <remarks>
+    /// 这张牌不需要登记选择入口，走求解器现成的生成选项通道：把三张候选记进
+    /// <c>History.CardGenerationOptions</c>，<c>CardChoiceSupport.GetSpec</c> 开头那段就会把它
+    /// 变成一次 <c>GenerateToHand</c> 的搜索分支，选中的那张由求解器加进手牌。原版的发现、
+    /// 飞溅、丰饶走的是同一条路。
+    ///
+    /// 三张候选是**确定的**，不是猜的：用求解器给的同一个
+    /// <c>Rng.CombatCardGeneration</c> 和同一个 <c>GetDistinctForCombat</c>，抽出来的三张和实机
+    /// 一致，所以部署时按卡牌令牌在原生页面上定位不会错位。
+    ///
+    /// 候选池照原版：取玩家已解锁的各角色牌池，多于一个时去掉自己这个角色的，
+    /// 再筛出攻击牌、排除令牌稀有度（原版写的是 `(int)Rarity != 7`，7 就是 `CardRarity.Token`）。
+    ///
+    /// 一处刻意的简化：升级版原版是在玩家选完之后只把**选中那张**设成本回合免费，这里对三张
+    /// 候选都设。选项最终只有一张进手牌，结果等价；而三张一起设不会让分支排序偏向任何一张。
+    /// </remarks>
     private static void ForeignInfluence(WatcherForeignInfluence card, CardOnPlayMirrorContext context)
-        => V.PlayerChoice(context, $"{card.Id.Entry} 从三张其他角色的攻击牌里选一张加入手牌");
+    {
+        List<CardPoolModel> pools = card.Owner.UnlockState.CharacterCardPools.ToList();
+        if (pools.Count > 1)
+            pools.Remove(card.Owner.Character.CardPool);
+
+        List<PredictedCard> options = pools
+            .SelectMany(pool => pool.GetUnlockedCards(
+                card.Owner.UnlockState, context.CardMultiplayerConstraint))
+            .Where(candidate => candidate.Type == CardType.Attack
+                && candidate.Rarity != CardRarity.Token)
+            .GetDistinctForCombat(
+                card.Owner,
+                3,
+                context.Rng.CombatCardGeneration,
+                context.CardMultiplayerConstraint)
+            .ToList();
+        if (options.Count == 0)
+            return;
+        if (card.IsUpgraded)
+        {
+            foreach (PredictedCard option in options)
+                option.SetToFreeThisTurn();
+        }
+        context.Simulator.History.CardGenerationOptions(options);
+    }
 
     private static void Foresight(WatcherForesight card, CardOnPlayMirrorContext context)
         => V.Power(context, typeof(ForesightPower), VarInt(card, "MagicNumber"));
@@ -164,9 +207,14 @@ internal static partial class WatcherCardMirrors
     private static void MasterReality(WatcherMasterReality card, CardOnPlayMirrorContext context)
         => V.Power(context, typeof(MasterRealityPower), 1);
 
+    /// <summary>从弃牌堆取牌回手并保留，进平静，结束回合。</summary>
+    /// <remarks>
+    /// 取哪几张是一次真正的搜索分支，登记在 <see cref="WatcherCardChoices"/>。这里只做选择之外
+    /// 的两件事。顺序是对的：求解器先跑 OnPlay 镜像再解析选择，而
+    /// <c>RequestPlayerTurnEnd</c> 只打标记，回合要等整张牌（含那次选择）结算完才推进。
+    /// </remarks>
     private static void Meditate(WatcherMeditate card, CardOnPlayMirrorContext context)
     {
-        V.PlayerChoice(context, $"{card.Id.Entry} 从弃牌堆里选 {VarInt(card, "MagicNumber")} 张回手并保留");
         S.EnterCalm(context);
         if (context.CardPlay.IsLastInSeries)
             V.ForceEndTurn(context);
@@ -181,13 +229,17 @@ internal static partial class WatcherCardMirrors
     private static void Omega(WatcherOmega card, CardOnPlayMirrorContext context)
         => V.Power(context, typeof(OmegaPower), VarInt(card, "MagicNumber"));
 
-    /// <summary>从抽牌堆选一张，加倍打出后放逐。</summary>
+    /// <summary>
+    /// 从抽牌堆选一张，打出两次然后消耗。整张牌的效果都在选择里，登记在
+    /// <see cref="WatcherCardChoices"/>，这里必须是空的。
+    /// </summary>
     /// <remarks>
-    /// 选牌之外还有一层顺序依赖：加倍的 Power 必须在自动打出之前施加，否则那张牌不会结算两次。
-    /// 整张牌都依赖玩家选择，所以整体记为未建模的选择。
+    /// 加倍的 Power 必须在自动打出之前施加，否则那张牌不会结算两次——这层顺序依赖也在
+    /// 选择的结算里，所以这里不能做任何事，否则会算两遍。
     /// </remarks>
     private static void Omniscience(WatcherOmniscience card, CardOnPlayMirrorContext context)
-        => V.PlayerChoice(context, $"{card.Id.Entry} 从抽牌堆选一张牌加倍打出");
+    {
+    }
 
     /// <summary>格挡。每次被保留时基础格挡会永久增长，那部分不在这里。</summary>
     /// <remarks>

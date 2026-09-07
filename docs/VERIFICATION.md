@@ -43,7 +43,13 @@ dotnet build AutoWatcher.csproj -c Release
 
 ## 当前覆盖范围
 
-**全部 101 张观者卡牌都注册了精确镜像。** 观者的牌实际只用到十来个效果动词，绝大多数牌是
+**观者的全部 100 个卡牌类型都注册了精确镜像。**
+
+数字的口径：反编译出 101 个 `WatcherCard` 子类，其中 `WatcherV2ChoiceTokenBase` 是抽象基类
+（`IsPlayable => false`、不进卡牌图鉴），不是一张牌，所以具体卡牌类型是 100 个，全部登记。
+这 100 个里包含选择令牌（如形态药剂的两张、许愿的三张）和多人局专属牌，它们不是玩家能
+主动打出的 100 张不同的牌 —— 所以这里说"卡牌类型"而不是"张"。
+（早先文档和文案写的"101 张"是把那个抽象基类算进去了，已订正。） 观者的牌实际只用到十来个效果动词，绝大多数牌是
 原版命令加一个观者动词，所以镜像是声明式的组合，一张牌一个方法、一行一效果、按反编译源码的
 调用顺序排列，可以逐行对照 `docs/` 里那份逐牌转写表来审。
 
@@ -104,7 +110,6 @@ dotnet build AutoWatcher.csproj -c Release
 
 | 内容 | 原因 |
 |---|---|
-| `WATCHER_OMNISCIENCE` / `WATCHER_FOREIGN_INFLUENCE` / `WATCHER_MEDITATE` 的选牌 | 选项都是「从某个牌堆里挑一张牌」，候选口径还没定下来。登记入口已经有了（`CardChoiceMirrors`），只是还没做 |
 | `WATCHER_DRAW_TALISMAN` 的批量临时附魔 | 需要附魔系统的建模 |
 | `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 求解器的生成接口按牌类型创建规范实例，不接受实例级负载 |
 | `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 那个 Power 自己维护一个实例表，N 张牌是 N 个独立成长的实例，不等于一个数量为 N 的实例 |
@@ -123,6 +128,36 @@ dotnet build AutoWatcher.csproj -c Release
 
 **3 个药水**：神赐甘露进神圣、瓶装奇迹加两张奇迹，都已镜像；姿态药水的二选一走
 `PotionChoiceMirrors`，见下面「姿态药水这一条要值多少」。
+
+### 四张选牌卡
+
+四张打出后要玩家当场选的牌都接上了搜索分支，不再记成未建模选择。
+
+| 牌 | 走哪条通道 | 为什么 |
+|---|---|---|
+| 许愿 | `CardChoiceMirrors`，`ModDefined` | 三个固定结果，效果由适配层施加 |
+| 冥想 | `CardChoiceMirrors`，`ModDefined` | 候选来自弃牌堆，但取回的牌要拿到单回合保留，现成的 `MoveToHand` 搬完没有接手的位置 |
+| 通晓万物 | `CardChoiceMirrors`，`ModDefined` | 现成的 `AutoPlayRepeated` 结算第一行就是 `if (source is not DecisionsDecisions) return true;`，候选也限定手牌里的技能牌 |
+| 他山之石 | **不用登记**，走生成选项通道 | 候选是随机生成的三张，和原版的发现、飞溅、丰饶同一形状 |
+
+几条实现上的要点：
+
+- **冥想**的保留不是可选项。这张牌打完回合就结束，取回来的牌没有保留会当场被弃掉，
+  下回合手里是 0 张而不是 N 张。张数照 `Dredge` 的口径按手牌上限截断；原版放不进手牌时走
+  `DeferRetainCard`，截断之后走不到，没有建模。
+- **冥想的进平静和结束回合留在 OnPlay 镜像里**，顺序是对的：求解器先跑 OnPlay 再解析选择，
+  而 `RequestPlayerTurnEnd` 只打标记，回合要等整张牌（含那次选择）结算完才推进。
+- **通晓万物的「打出两次」不用自己循环**。原版是先挂 `OmniscienceDoublePower` 再自动打出，
+  那个 Power 的 `ModifyCardPlayCount` 加一次、之后自己移除，适配层早就镜像了它。顺序照原版：
+  先挂 Power 再打。抽牌堆为空时下界给 0，否则搜索会永远等一个做不出的选择。
+- **他山之石的三张候选是确定的**，不是猜的：用求解器给的同一个 `Rng.CombatCardGeneration` 和
+  同一个 `GetDistinctForCombat`，抽出来的三张和实机一致，所以部署时按令牌定位不会错位。
+  候选池照原版取已解锁的各角色牌池、多于一个时去掉自己那个、筛攻击牌、排除 `CardRarity.Token`
+  （原版写的是 `(int)Rarity != 7`）。升级版原版只把选中那张设成本回合免费，这里对三张候选都设 ——
+  最终只有一张进手牌，结果等价，而三张一起设不会让分支排序偏向任何一张。
+- `ModDefined` 的结算里求解器不替登记方把令牌解析回牌（它连 `SourcePile` 都不查），
+  因为多数登记方的选项是凭空造的令牌、不在任何牌堆里。候选确实来自牌堆时要自己解析，
+  匹配用求解器自己的 `MatchesToken`，口径完全一致。
 
 ### 许愿的三选一
 

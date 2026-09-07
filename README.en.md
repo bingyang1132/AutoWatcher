@@ -43,7 +43,7 @@ When something breaks, check which pair you have installed first.
 
 ## What is covered
 
-- **All 101 Watcher cards** mirrored one by one, written against the decompiled implementation
+- **All 100 Watcher card types** mirrored one by one, written against the decompiled implementation
   rather than guessed from the card text
 - **All four stances**: entry, exit, damage multipliers, energy, plus the knock-on effects from
   Mental Fortress, Violet Lotus and Rushdown

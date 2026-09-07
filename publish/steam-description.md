@@ -62,7 +62,7 @@
 [h2]覆盖了什么[/h2]
 
 [list]
-[*][b]全部 101 张观者卡牌[/b]逐张核对镜像，按反编译出的实现写，不是照着卡面文字猜
+[*][b]观者的全部 100 个卡牌类型[/b]逐个核对镜像，按反编译出的实现写，不是照着卡面文字猜
 [*][b]四种姿态[/b]的进入、退出、伤害倍率和能量收支，以及心之堡垒、紫莲花、疾风连打这些连带效果
 [*][b]预视[/b]是真正的搜索分支：丢哪几张由求解器自己搜，不再每次预视都触发一次重算
 [*][b]额外回合[/b]（跳跃）、手牌保留、回合开始与结束的各类钩子
@@ -140,7 +140,7 @@ The solver on GitHub: https://github.com/Torch1230/CombatSolver
 [h2]What is covered[/h2]
 
 [list]
-[*][b]All 101 Watcher cards[/b] mirrored one by one, written against the decompiled
+[*][b]All 100 Watcher card types[/b] mirrored one by one, written against the decompiled
 implementation rather than guessed from the card text
 [*][b]All four stances[/b]: entry, exit, damage multipliers, energy, plus knock-on effects from
 Mental Fortress, Violet Lotus and Rushdown
