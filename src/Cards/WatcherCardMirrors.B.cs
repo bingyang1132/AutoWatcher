@@ -198,8 +198,11 @@ internal static partial class WatcherCardMirrors
         V.RecordFatalKillCardPlayed(context);
         int historyStart = context.History.Entries.Count;
         V.Attack(context);
-        if (V.WasFatalKill(context, historyStart))
-            V.RecordFatalKillBonus(context, LessonLearnedLongTermResourceValue);
+        if (!V.WasFatalKill(context, historyStart))
+            return;
+        V.RecordFatalKillBonus(context, LessonLearnedLongTermResourceValue);
+        // 长期资源刻度换不到血；玩家愿意为这次永久升级挨多少打，走成长额度那一份。
+        WatcherGrowthSources.RecordLessonLearned(V.Combat(context));
     }
 
     private static void LikeWater(WatcherLikeWater card, CardOnPlayMirrorContext context)

@@ -127,6 +127,9 @@ public static class Entry
         // 打出后当场让玩家选一个的牌。目前只有许愿一张。
         WatcherCardChoices.RegisterAll();
 
+        // 收益落在本场战斗之外的两处：勤学精进的永久升级，许愿三选一里的金币。
+        WatcherGrowthSources.RegisterAll();
+
         RegisteredCardCount = 5
             + WatcherCardMirrors.RegisterA(onPlay)
             + WatcherCardMirrors.RegisterB(onPlay)

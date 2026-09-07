@@ -49,7 +49,9 @@ When something breaks, check which pair you have installed first.
 - **Extra turns** (Vault), card retain, and the various turn-start / turn-end hooks
 - **The Wrath/Calm infinite**: 🐯😡🥶😡🥶😡🥶😡🥶😡🥶😡🥶
 - **Cross-combat value**: the deck upgrade from Lesson Learned's execute, and Wish's gold, count
-  toward long-term value
+  toward long-term value. When the solver supports third-party growth sources, both also get their
+  own row in the growth-strategy sidebar, so you can set how much extra damage you are willing to
+  take for each
 - **9 relics, 3 potions, 14 power hooks**, plus three sites the solver has no registry for and
   which therefore need Harmony patches
 

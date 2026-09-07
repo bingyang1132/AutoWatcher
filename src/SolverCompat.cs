@@ -59,6 +59,14 @@ internal static class SolverCompat
     public static readonly Action<Type, Action<CombatPredictionSimulator, PowerModel, PowerModel>>?
         RegisterPowerHiddenRootCapture = BindPowerHiddenRootCapture();
 
+    /// <summary>
+    /// <c>GrowthSourceMirrors.Register</c>。绑上了才能给观者的局外成长牌配独立的战损额度。
+    /// </summary>
+    private static readonly MethodInfo? GrowthSourceRegister = BindGrowthSourceRegister();
+
+    /// <summary>求解器有没有第三方局外成长来源的登记入口。</summary>
+    public static bool HasGrowthSourceRegistry => GrowthSourceRegister is not null;
+
     /// <summary>绑定的结果，写进加载日志，方便一眼看出装的是哪种求解器。</summary>
     public static string Summary =>
         (RecordFatalKillGoal is null
@@ -66,7 +74,76 @@ internal static class SolverCompat
             : "跨战斗收益目标：已绑定")
         + (RegisterPowerHiddenState is null
             ? "。Power 隐藏状态进指纹：求解器没有这个入口，光辉与天人形态改记风险"
-            : "。Power 隐藏状态进指纹：已绑定");
+            : "。Power 隐藏状态进指纹：已绑定")
+        + (GrowthSourceRegister is null
+            ? "。局外成长来源登记：求解器没有这个入口，勤学精进与许愿的金币只走长期资源刻度"
+            : "。局外成长来源登记：已绑定");
+
+    /// <summary>
+    /// 登记一个第三方局外成长来源，返回"记一次收益到手"的委托。求解器没有这个入口时返回
+    /// <c>null</c>，调用点判空跳过。
+    /// </summary>
+    /// <param name="id">持久化键，改了等于换来源，玩家原来填的额度不再生效。</param>
+    /// <param name="card">侧栏这一行的图标与标题，求解器在构建侧栏时才调用。</param>
+    /// <param name="hasTarget">判牌组里一张牌算不算这个来源的目标。</param>
+    /// <param name="title">
+    /// 侧栏标题，参数是 <paramref name="card" /> 取回来的那张牌；留空用牌自己的名字。
+    /// 和 <paramref name="card" /> 一起延迟调用。
+    /// </param>
+    /// <remarks>
+    /// 句柄类型 <c>GrowthSourceHandle</c> 编译时不可见，所以登记走反射拿到装箱的句柄，再把它
+    /// 作为常量嵌进一个编译好的委托里——和 <see cref="BindLongTermGoal" /> 对枚举值是同一手法。
+    /// 登记只在加载时发生两次，反射的代价无所谓；<b>记账</b>那一侧是直接调用，不走反射。
+    /// </remarks>
+    public static Action<SimulatedCombatState>? RegisterGrowthSource(
+        string id,
+        Func<CardModel> card,
+        Func<CardModel, bool> hasTarget,
+        Func<CardModel, string>? title = null)
+    {
+        if (GrowthSourceRegister is null)
+            return null;
+        try
+        {
+            object? handle = GrowthSourceRegister.Invoke(null, [id, card, hasTarget, title]);
+            if (handle is null)
+                return null;
+            MethodInfo? record = typeof(SimulatedCombatState).GetMethod(
+                "RecordGrowthReward",
+                BindingFlags.Public | BindingFlags.Instance,
+                binder: null,
+                types: [handle.GetType()],
+                modifiers: null);
+            if (record is null)
+                return null;
+            ParameterExpression combat = Expression.Parameter(typeof(SimulatedCombatState), "combat");
+            return Expression.Lambda<Action<SimulatedCombatState>>(
+                Expression.Call(combat, record, Expression.Constant(handle, handle.GetType())),
+                combat).Compile();
+        }
+        catch (Exception ex)
+        {
+            EngineDiagnostics.Warn($"[AutoWatcher] 没能登记局外成长来源 {id}：{ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>找 <c>GrowthSourceMirrors.Register</c>；签名对不上就当没有。</summary>
+    private static MethodInfo? BindGrowthSourceRegister()
+    {
+        try
+        {
+            MethodInfo? register = typeof(SimulatedCombatState).Assembly
+                .GetType("CombatSolver.GrowthSourceMirrors", throwOnError: false)
+                ?.GetMethod("Register", BindingFlags.Public | BindingFlags.Static);
+            return register?.GetParameters().Length == 4 ? register : null;
+        }
+        catch (Exception ex)
+        {
+            EngineDiagnostics.Warn($"[AutoWatcher] 没能绑上 GrowthSourceMirrors.Register：{ex.Message}");
+            return null;
+        }
+    }
 
     private static Type? HiddenStateMirrors()
         => typeof(SimulatedCombatState).Assembly

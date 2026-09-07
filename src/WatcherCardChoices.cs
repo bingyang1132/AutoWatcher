@@ -111,6 +111,8 @@ internal static class WatcherCardChoices
                 // 那把刻度在最终选择里排在所有掉血项之后，所以金币永远换不到血，只在打平时起作用。
                 combat.GainPlayerGold(card.Owner, amount);
                 combat.RecordLongTermResource(amount);
+                // 长期资源刻度换不到血；玩家愿意为这笔金币挨多少打，走成长额度那一份。
+                WatcherGrowthSources.RecordWishGold(combat);
                 break;
         }
         return !simulator.HasPendingChoice;
