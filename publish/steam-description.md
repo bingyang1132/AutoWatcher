@@ -25,11 +25,9 @@
 
 让[b]杀戮尖塔2自动战斗求解器[/b]适用于[b]观者[/b]。
 
-求解器默认拒绝第三方角色 Mod，装上观者之后会直接停在「检测到不兼容的第三方 Mod」。
-装上本 Mod 之后，求解器不但能跑，还能真正理解观者的牌、姿态和额外回合。
-
 [b]本 Mod 不改变任何游戏行为。[/b] 它只补上求解器缺失的模拟镜像，清单里 affects_gameplay
-是 false。你的牌、伤害、一切数值都和不装它时完全一样，唯一的区别是求解器算得对。
+是 false。牌、伤害、一切数值都和不装它时完全一样，唯一的区别是装上之后求解器可以自动化观者
+的打牌。
 
 [h2]需要装什么[/h2]
 
@@ -39,17 +37,12 @@
 [*]RitsuLib
 [/list]
 
-三个都要装。缺任何一个，本 Mod 都不会加载，也不会留下半装的状态。
+三个都要装。版本不对不会静默出错——求解器太旧或缺了登记入口，本 Mod 会干净地拒绝加载并写明
+原因。细节见下面的常见问题。
 
-求解器要 0.32.0 以上，是因为适配层要把观者的效果登记进它的内部注册表，而这些登记入口是逐版
-加进去的——0.32.0 是第一个发布产物里就带全的版本。
+[h2]求解器还在持续开发，本 Mod 也会相应持续更新[/h2]
 
-版本不对不会静默出错：求解器太旧或缺了登记入口，本 Mod 会干净地拒绝加载，日志里写明缺什么，
-一个镜像都不注册。
-
-[h2]求解器还在持续开发，本 Mod 跟着它走[/h2]
-
-适配层是贴着求解器的内部接口写的，求解器一改，适配层就得跟一次。所以本 Mod 分两条线发布：
+适配层是贴着求解器的内部接口写的，求解器一改，适配层就可能得跟一次。所以本 Mod 分两条线发布：
 
 [list]
 [*][b]创意工坊版[/b]，也就是你现在看的这个 —— 对标求解器的[b]发布版[/b]（0.32.0 起）。
@@ -57,8 +50,6 @@
 [*][b]GitHub 版[/b] —— 对标某一个确定的求解器版本，可能是还没发布的开发版。每个 release 会
 写明它对标哪一个求解器版本并给出链接。
 [/list]
-
-两条线不要混着装。混了也不会静默出错——结构自检对不上就拒绝加载——但没必要。
 
 本 Mod 的 GitHub：https://github.com/bingyang1132/AutoWatcher
 求解器的创意工坊：https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961
@@ -82,14 +73,34 @@
 未镜像的效果」，你看得见。另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。
 两份清单都在 GitHub 的核对记录里。
 
-「以手拒之」的排序问题已经修好。之前求解器不会为了起甲把它排到攻击牌前面，修法是在求解器
-那边开一个第三方登记入口，让「挂在敌人身上、收益归玩家」的效果也能进防御判定。所以本 Mod
-需要含这个入口的求解器版本。
+[h2]常见问题[/h2]
+
+[b]装了本 Mod，求解器还是停在「检测到不兼容的第三方 Mod」？[/b]
+说明适配层没有加载。日志里 AutoWatcher 开头那几行会写明原因，最常见的是求解器版本低于
+0.32.0。适配层是全有或全无：前提不成立就一个镜像都不注册，绝不装一半。
+
+[b]为什么求解器一定要 0.32.0 以上？[/b]
+适配层要把观者的效果登记进求解器的内部注册表，而这些登记入口是逐版加进去的。0.32.0 是第一个
+发布产物里就带全五条的版本：第三方战略估值、药水选择、卡牌选择、牌堆弃牌、可打出性覆盖。
+
+[b]工坊版和 GitHub 版可以混着装吗？[/b]
+不要。混了也不会静默出错——结构自检对不上就拒绝加载——但没必要。出了问题优先看你装的是哪一对。
+
+[b]观者更新之后还能用吗？[/b]
+只要观者的内部结构没变就照常工作，结构变了就同样干净地拒绝加载。但有一种情况自检抓不到：
+观者可以在不改任何签名的前提下改数值或改效果。那时日志里会写「这一份观者不是逐条核对过的
+那一版」——看到那句话又觉得路线不对，请报 Bug。
+
+[b]报 Bug 为什么一定要问题包？[/b]
+路线错在哪几乎都得看完整的战斗状态才能定位，只有文字描述通常不够。求解器自带导出。
+
+[b]「以手拒之」不会被排到攻击牌前面起甲？[/b]
+已经修好了。镜像本身一直是对的，坏的是求解器的动作分类：它只统计自己身上的增益，挂在敌人
+身上的那层完全看不见。修法是在求解器那边开一个第三方战略估值的登记入口。需要求解器 0.32.0 以上。
 
 [h2]报 Bug[/h2]
 
-求解器自带问题包导出。导出以后发到 GitHub Issues，附上你看到的现象，并说明你装的是工坊版
-还是 GitHub 版。带上问题包我基本都能定位；只有文字描述通常不够。
+求解器自带问题包导出。导出以后发到 GitHub Issues，附上看到的现象。欢迎捉虫！
 
 [h2]致谢[/h2]
 
@@ -104,14 +115,10 @@
 
 Teaches the [b]Combat Solver[/b] to understand the [b]Watcher[/b].
 
-The solver rejects third-party character mods by default — with the Watcher installed it stops
-outright at "incompatible third-party mod detected". With AutoWatcher installed the solver not
-only runs, it actually understands the Watcher's cards, stances and extra turns.
-
 [b]This mod changes no game behaviour.[/b] It only fills in the simulation mirrors the solver is
-missing; the manifest sets affects_gameplay to false. Your cards, your damage, every number is
-exactly what it would be without this mod. The only difference is that the solver gets its
-arithmetic right.
+missing; the manifest sets affects_gameplay to false. Cards, damage, every number is exactly what
+it would be without this mod. The only difference is that with it installed, the solver can
+automate playing the Watcher.
 
 [h2]Requirements[/h2]
 
@@ -121,17 +128,11 @@ arithmetic right.
 [*]RitsuLib
 [/list]
 
-All three are required. If any one is missing, AutoWatcher refuses to load rather than
-registering half of itself.
+All three are required. A version mismatch never fails silently — if the solver is too old or
+missing a registration point, AutoWatcher refuses to load cleanly and says why. Details in the
+FAQ below.
 
-The solver has to be 0.32.0 or newer because the adapter registers the Watcher's effects into the
-solver's internal registries, and those registration points were added version by version.
-0.32.0 is the first released build that ships all of them.
-
-A version mismatch never fails silently: if the solver is too old or missing a registration
-point, AutoWatcher refuses to load cleanly, logs exactly what is missing, and registers nothing.
-
-[h2]The solver is under active development, and this mod follows it[/h2]
+[h2]The solver is under active development, and this mod keeps up with it[/h2]
 
 The adapter is written against the solver's internal interfaces, so every time the solver
 changes, the adapter has to be brought back in line. Hence two channels:
@@ -142,9 +143,6 @@ Just subscribe. This is the one you normally want.
 [*][b]GitHub[/b] — targets one specific solver version, possibly a development build. Every
 release states which solver version it was built against and links to it.
 [/list]
-
-Do not mix the two. Mixing will not fail silently — the structural check refuses to load when it
-does not line up — but there is no reason to.
 
 This mod on GitHub: https://github.com/bingyang1132/AutoWatcher
 The solver on the Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961
@@ -157,11 +155,9 @@ The solver on GitHub: https://github.com/Torch1230/CombatSolver
 implementation rather than guessed from the card text
 [*][b]All four stances[/b]: entry, exit, damage multipliers, energy, plus knock-on effects from
 Mental Fortress and Flurry of Blows
-[*][b]Scry as a real search branch[/b]: which cards to discard is something the solver searches,
-instead of forcing a replan on every scry
+[*][b]Scry as a real search branch[/b]: which cards to discard is something the solver searches
 [*][b]Extra turns[/b] (Vault), card retain, and the various turn-start / turn-end hooks
-[*][b]The Wrath/Calm infinite[/b]: the draw-on-entering-Wrath is modelled, so the solver
-recognises and expands the loop
+[*][b]The Wrath/Calm infinite[/b]: 🐯😡🥶😡🥶😡🥶😡🥶😡🥶😡🥶
 [*][b]Cross-combat value[/b]: the deck upgrade from Lesson Learned's execute, and Wish's gold,
 count toward long-term value
 [*]9 relics, 3 potions, 14 power hooks, plus three sites the solver has no registry for
@@ -173,16 +169,44 @@ Five effects are explicitly recorded as unmirrored. They [b]never silently misca
 the solver marks the route in red with "unmirrored effect here", so you can see it. A further set
 of hooks is also not covered. Both lists are in the verification notes on GitHub.
 
-The Talk to the Hand ordering problem is fixed. The solver used to refuse to reorder it ahead of
-your attacks to gain the block; the fix adds a third-party registration hook on the solver side so
-that effects sitting on an enemy but paying out to the player reach the defensive classification.
-AutoWatcher therefore needs a solver build containing that hook.
+[h2]FAQ[/h2]
+
+[b]I installed this mod and the solver still stops at "incompatible third-party mod detected".[/b]
+The adapter did not load. The lines starting with AutoWatcher in the log say why; the most common
+reason is a solver older than 0.32.0. The adapter is all-or-nothing: if its prerequisites do not
+hold it registers nothing at all rather than half of itself.
+
+[b]Why does the solver have to be 0.32.0 or newer?[/b]
+The adapter registers the Watcher's effects into the solver's internal registries, and those
+registration points were added version by version. 0.32.0 is the first build whose released
+binary ships all five: third-party strategic evaluation, potion choices, card choices, pile
+discard choices, and playability coverage.
+
+[b]Can I mix the Workshop build with the GitHub build?[/b]
+Do not. Mixing will not fail silently — the structural check refuses to load when it does not
+line up — but there is no reason to. When something breaks, check which pair you have installed.
+
+[b]Will it still work after the Watcher updates?[/b]
+As long as the Watcher's internals are unchanged, yes; if they changed, it refuses to load the
+same clean way. There is one case the check cannot catch: the Watcher can change numbers or
+effects without changing any signature. The log will then say this build of the Watcher is not the
+one the adapter was verified against — if you see that line and a route looks wrong, please file a
+bug.
+
+[b]Why do you need a bug package?[/b]
+Locating a wrong route almost always needs the full combat state; a text description alone usually
+is not enough. The solver has a built-in export.
+
+[b]Talk to the Hand does not get ordered ahead of my attacks to gain the block.[/b]
+That is fixed. The mirror was always right; what was broken was the solver's action
+classification — it only counted buffs on the player, so a Power sitting on the enemy that pays
+out to the player was invisible. The fix adds a third-party strategic-evaluation registration
+point on the solver side. Needs solver 0.32.0 or newer.
 
 [h2]Reporting bugs[/h2]
 
 The solver has a built-in bug-package export. Export one and open a GitHub issue with it,
-describing what you saw and saying whether you are on the Workshop or the GitHub build. With a
-bug package I can usually locate the problem; a text description alone usually is not enough.
+describing what you saw. Bug hunts welcome!
 
 [h2]Credits[/h2]
 
