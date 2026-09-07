@@ -101,6 +101,20 @@ public static class Entry
         harmony.Patch(
             WatcherRushdownPatch.ResolveTarget(),
             postfix: new HarmonyMethod(typeof(WatcherRushdownPatch), nameof(WatcherRushdownPatch.Postfix)));
+        // 天人形态每回合的能量：原版走 AfterEnergyReset，求解器那一段也没有注册点。
+        harmony.Patch(
+            WatcherDevaEnergyPatch.ResolveTarget(),
+            postfix: new HarmonyMethod(typeof(WatcherDevaEnergyPatch), nameof(WatcherDevaEnergyPatch.Postfix)));
+
+        // 观者那两处隐藏状态的登记。要在装根捕获补丁之前跑：登记成功就不装那条补丁。
+        WatcherHiddenState.RegisterAll();
+        if (WatcherHiddenState.NeedsRootCapturePatch)
+        {
+            harmony.Patch(
+                WatcherDevaRootCapturePatch.ResolveTarget(),
+                postfix: new HarmonyMethod(
+                    typeof(WatcherDevaRootCapturePatch), nameof(WatcherDevaRootCapturePatch.Postfix)));
+        }
 
         WatcherHookMirrors.RegisterAll();
 

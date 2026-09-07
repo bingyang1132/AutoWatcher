@@ -53,6 +53,8 @@ internal static class AdapterSelfCheck
         ("WatcherMod.WatcherStatePower", "KnowFateConsumptionAttemptedThisCard"),
         ("WatcherMod.WatcherStatePower", "KnowFateLastObserved"),
         ("WatcherMod.EndTurnDeathPower", "_appliedOnTurn"),
+        // 天人形态的实例表。适配层只读它的长度，而那个长度决定每回合给多少能量。
+        ("WatcherMod.DevaPower", "Instances"),
     ];
 
     public static Result Run()

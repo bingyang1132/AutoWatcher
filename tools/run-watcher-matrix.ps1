@@ -519,6 +519,67 @@ $cases = @(
             "-ExpectedInitialFirstActionCardId", "WATCHER_TANTRUM",
             "-ExpectedInitialUnmirroredCount", "0"
         )
+    },
+    @{
+        # X 费生成一张灭除之刃，段数等于实付能量。这条的反向对照内建在数字里：
+        # 段数按默认 1 算的话第二回合只有 9 点，敌人 27 血活着；段数是 3 才刚好 27 点。
+        # 所以"未镜像计数为 0"和"第二回合结束"必须同时成立，缺一个就说明段数没写进生成结果。
+        Id = "WATCHER-CONJURE-BLADE-HIT-COUNT"
+        Tags = @("cards", "damage")
+        Why = "聚能成刃生成的灭除之刃段数等于实付能量。3 费 -> 3 段 x 9 点 = 27，正好斩杀。"
+        Args = @(
+            "-EnemyCurrentHp", "27", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", (Hand @("WATCHER_CONJURE_BLADE")),
+            "-ExpectedInitialFirstActionCardId", "WATCHER_CONJURE_BLADE",
+            "-ExpectedInitialCombatEndedTurn", "2",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 先给目标叠 8 层标记，然后每个带标记的敌人按自己的层数吃一次无视格挡伤害。
+        # 打两张：8 + 16 = 24。这一跳走的是 CreatureCmd.Damage 而不是攻击，所以不吃力量。
+        # 反向对照：这一跳没建模的话总伤害是 0，敌人 24 血活得好好的。
+        Id = "WATCHER-PRESSURE-POINTS-UNBLOCKABLE"
+        Tags = @("cards", "damage")
+        Why = "点穴那一跳的无视格挡伤害按标记层数结算。两张 8 + 16 = 24，正好斩杀。"
+        Args = @(
+            "-EnemyCurrentHp", "24", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", '[{"cardId":"WATCHER_PRESSURE_POINTS","pile":"Hand","count":2}]',
+            "-ExpectedInitialFirstActionCardId", "WATCHER_PRESSURE_POINTS",
+            "-ExpectedInitialCombatEndedTurn", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 光辉的伤害等于牌面 12 加上本场累计获得的真言。拜倒 0 费给 2 点真言，所以
+        # 先拜倒再光辉是 14 点、正好斩杀；直接打光辉只有 12 点。顺序由求解器自己排出来。
+        #
+        # 这条真正盯的是"未镜像计数为 0"：伤害以前也算得对，记风险是因为累计真言进不了
+        # 状态指纹。求解器带隐藏状态登记入口时那条风险不再存在，计数必须是 0。
+        Id = "WATCHER-BRILLIANCE-MANTRA-DAMAGE"
+        Tags = @("cards", "damage")
+        Why = "光辉的伤害加上累计真言，而且不再记未镜像。拜倒 2 点真言 -> 14 点正好斩杀。"
+        Args = @(
+            "-EnemyCurrentHp", "14", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", '[{"cardId":"WATCHER_PROSTRATE","pile":"Hand","count":1},{"cardId":"WATCHER_BRILLIANCE","pile":"Hand","count":1}]',
+            "-ExpectedInitialCombatEndedTurn", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 天人形态每回合按实例表总和给能量，再把每个实例加一。一张牌 = 一个实例，
+        # 所以第二回合是 3 + 1 = 4 点能量。
+        # 反向对照：不给那 1 点的话第二回合只有 3 点、三张打击 18 点，敌人 24 血活着。
+        Id = "WATCHER-DEVA-FORM-ENERGY"
+        Tags = @("patches", "cards")
+        Why = "天人形态第二回合多给 1 点能量。四张打击 24 点正好斩杀，少 1 点能量就只有 18 点。"
+        Args = @(
+            "-EnemyCurrentHp", "24", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-CardsJson", '[{"cardId":"WATCHER_DEVA_FORM","pile":"Hand","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Draw","count":4}]',
+            "-ExpectedInitialFirstActionCardId", "WATCHER_DEVA_FORM",
+            "-ExpectedInitialCombatEndedTurn", "2",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
     }
 )
 

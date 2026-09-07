@@ -55,8 +55,8 @@ When something breaks, check which pair you have installed first.
 
 ## Known gaps
 
-Three cards have effects explicitly recorded as unmirrored: **Brilliance**, **Deva Form** and
-**Draw Talisman**. They **never silently miscalculate** — the solver marks the
+Just one card's effect is still explicitly recorded as unmirrored: **Draw Talisman** (a weak
+Ancient card the mod adds itself). It **never silently miscalculates** — the solver marks the
 route in red with "unmirrored effect here". A further set of hooks that run through Harmony
 postfixes, or that the solver does not dispatch, is also not covered. These will be filled in over
 the coming releases.

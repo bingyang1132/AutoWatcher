@@ -2,6 +2,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using CombatSolver;
 using CombatSolver.Engine.Common;
+using CombatSolver.Engine.InCombat.Simulation;
+using MegaCrit.Sts2.Core.Models;
 
 namespace AutoWatcher;
 
@@ -35,11 +37,122 @@ internal static class SolverCompat
     public static readonly Action<SimulatedCombatState>? RecordFatalKillGoalCardPlayed =
         BindLongTermGoal("RecordLongTermGoalCardPlayed");
 
+    /// <summary>
+    /// 把一个 Power 的隐藏状态登记进搜索的状态指纹。
+    /// </summary>
+    /// <remarks>
+    /// 参数依次是 Power 类型、状态名、读取函数。绑不上说明求解器还没有这个入口，那时候只在
+    /// 状态不为零时记一条风险——数值照样算得对，缺的是"只在这个状态上不同的两条分支不会被
+    /// 去重掉"这一层保证。
+    /// </remarks>
+    public static readonly Action<Type, string, Func<CombatPredictionSimulator, PowerModel, long>>?
+        RegisterPowerHiddenState = BindPowerHiddenState("Register");
+
+    /// <summary>
+    /// 登记根捕获：把实机实例的隐藏状态搬进模拟。靠 <c>_internalData</c> 保存状态的 Power
+    /// 必须有这一步，因为克隆会把它重置成初值。
+    /// </summary>
+    /// <remarks>
+    /// 绑不上时改走 Harmony 补丁（<see cref="WatcherDevaRootCapturePatch" />），两条路调同一个
+    /// 播种函数。
+    /// </remarks>
+    public static readonly Action<Type, Action<CombatPredictionSimulator, PowerModel, PowerModel>>?
+        RegisterPowerHiddenRootCapture = BindPowerHiddenRootCapture();
+
     /// <summary>绑定的结果，写进加载日志，方便一眼看出装的是哪种求解器。</summary>
     public static string Summary =>
-        RecordFatalKillGoal is null
+        (RecordFatalKillGoal is null
             ? "跨战斗收益目标：求解器没有这个入口，已跳过"
-            : "跨战斗收益目标：已绑定";
+            : "跨战斗收益目标：已绑定")
+        + (RegisterPowerHiddenState is null
+            ? "。Power 隐藏状态进指纹：求解器没有这个入口，光辉与天人形态改记风险"
+            : "。Power 隐藏状态进指纹：已绑定");
+
+    private static Type? HiddenStateMirrors()
+        => typeof(SimulatedCombatState).Assembly
+            .GetType("CombatSolver.PowerHiddenStateMirrors", throwOnError: false);
+
+    /// <summary>
+    /// 绑 <c>PowerHiddenStateMirrors.Register&lt;TPower&gt;(name, Func&lt;Sim, TPower, long&gt;)</c>。
+    /// </summary>
+    /// <remarks>
+    /// 那个方法是泛型的，而调用方只有一个 <c>Type</c>，所以每次登记都要把读取函数从
+    /// <c>Func&lt;Sim, PowerModel, long&gt;</c> 包成 <c>Func&lt;Sim, TPower, long&gt;</c>。
+    /// 登记只在加载时发生几次，包装的代价无所谓；<b>读取</b>那一侧是编译好的委托直接调用，
+    /// 不走反射。
+    /// </remarks>
+    private static Action<Type, string, Func<CombatPredictionSimulator, PowerModel, long>>?
+        BindPowerHiddenState(string name)
+    {
+        try
+        {
+            MethodInfo? generic = HiddenStateMirrors()?.GetMethod(
+                name, BindingFlags.Public | BindingFlags.Static);
+            if (generic is null || !generic.IsGenericMethodDefinition)
+                return null;
+            return (powerType, stateName, read) =>
+            {
+                Type funcType = typeof(Func<,,>).MakeGenericType(
+                    typeof(CombatPredictionSimulator), powerType, typeof(long));
+                ParameterExpression simulator =
+                    Expression.Parameter(typeof(CombatPredictionSimulator), "simulator");
+                ParameterExpression power = Expression.Parameter(powerType, "power");
+                Delegate typed = Expression.Lambda(
+                    funcType,
+                    Expression.Invoke(
+                        Expression.Constant(read),
+                        simulator,
+                        Expression.Convert(power, typeof(PowerModel))),
+                    simulator,
+                    power).Compile();
+                generic.MakeGenericMethod(powerType).Invoke(null, [stateName, typed]);
+            };
+        }
+        catch (Exception ex)
+        {
+            EngineDiagnostics.Warn($"[AutoWatcher] 没能绑上 PowerHiddenStateMirrors.{name}：{ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>绑 <c>PowerHiddenStateMirrors.RegisterRootCapture&lt;TPower&gt;</c>。</summary>
+    private static Action<Type, Action<CombatPredictionSimulator, PowerModel, PowerModel>>?
+        BindPowerHiddenRootCapture()
+    {
+        try
+        {
+            MethodInfo? generic = HiddenStateMirrors()?.GetMethod(
+                "RegisterRootCapture", BindingFlags.Public | BindingFlags.Static);
+            if (generic is null || !generic.IsGenericMethodDefinition)
+                return null;
+            return (powerType, capture) =>
+            {
+                Type actionType = typeof(Action<,,>).MakeGenericType(
+                    typeof(CombatPredictionSimulator), powerType, powerType);
+                ParameterExpression simulator =
+                    Expression.Parameter(typeof(CombatPredictionSimulator), "simulator");
+                ParameterExpression clone = Expression.Parameter(powerType, "clone");
+                ParameterExpression original = Expression.Parameter(powerType, "original");
+                Delegate typed = Expression.Lambda(
+                    actionType,
+                    Expression.Invoke(
+                        Expression.Constant(capture),
+                        simulator,
+                        Expression.Convert(clone, typeof(PowerModel)),
+                        Expression.Convert(original, typeof(PowerModel))),
+                    simulator,
+                    clone,
+                    original).Compile();
+                generic.MakeGenericMethod(powerType).Invoke(null, [typed]);
+            };
+        }
+        catch (Exception ex)
+        {
+            EngineDiagnostics.Warn(
+                $"[AutoWatcher] 没能绑上 PowerHiddenStateMirrors.RegisterRootCapture：{ex.Message}");
+            return null;
+        }
+    }
 
     /// <summary>
     /// 绑 <c>SimulatedCombatState.&lt;name&gt;(LongTermGoals.FatalKillBonus)</c>。

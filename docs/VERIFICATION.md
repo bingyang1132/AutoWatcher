@@ -110,37 +110,50 @@ dotnet build AutoWatcher.csproj -c Release
 
 | 内容 | 原因 |
 |---|---|
-| `WATCHER_BRILLIANCE` 的伤害 | 数值本身算对了，但它取自 `WatcherStatePower` 的私有字段，而指纹只收 `DynamicVars`。只在计数不为零时才记风险，见下面「隐藏字段这一类」 |
-| `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 同一类问题：实例数在 Power 的内部数据里，进不了指纹 |
 | `WATCHER_DRAW_TALISMAN` 的批量临时附魔 | 临时附魔栈是一张静态 `ConditionalWeakTable`，在模型状态之外，见下面「画符为什么是另一类」 |
 
-以下两条原先在这张表里，现已补齐：
+以下四条原先在这张表里，现已补齐：
 
 | 内容 | 怎么解决的 |
 |---|---|
 | `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 生成接口会把加进去的那张牌返回出来，拿到之后写 `HitCount` 即可——原版也是先建后赋值再入堆。落点是 `DynamicVars.Repeat`，普通数值变量，会进指纹 |
 | `WATCHER_PRESSURE_POINTS` 的无视格挡伤害 | 原版走的是 `CreatureCmd.Damage` 而不是 `DamageCmd.Attack`，求解器的 `Damage` 重载本身就收 `ValueProp`，照 `Unblockable \| Unpowered` 调即可。不能用攻击动词，那条路会套上全部攻击修正 |
+| `WATCHER_BRILLIANCE` 的伤害 | 数值一直算得对，缺的是累计真言进指纹。求解器开了 `PowerHiddenStateMirrors` 之后登记一个读取函数即可，见下面「隐藏状态这一类」 |
+| `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 整张实例表不必复现，只需要多记一个「实例个数」。见下面「隐藏状态这一类」 |
 
-#### 隐藏字段这一类：光辉与天人形态
+#### 隐藏状态这一类：光辉与天人形态
 
-两张牌卡在同一个地方，值得单独写清楚，免得下次又从头查一遍。
+两张牌卡在同一个地方，值得写清楚，免得下次又从头查一遍。
 
-状态指纹（`SimulatedCombatState.AddPower`）和续接戳（`ContinuationStamp.AppendPowers`）**都只收
-`DynamicVars`**。`WatcherStatePower._totalMantraGainedThisCombat` 和 `DevaPower` 的实例表都是普通
-私有字段，两边都看不见。
+状态指纹里 Power 的通用部分（`SimulatedCombatState.AddPower`）**只收 `DynamicVars`**。
+`WatcherStatePower._totalMantraGainedThisCombat` 和 `DevaPower` 的实例表都不在那里。
 
-- 对**续接**没有害处：实机那一侧读的是同一个模型，同样看不见，两边一致。
-- 对**搜索去重**有害处：只在这个计数上不同的两条分支指纹相同，会被当成同一个状态去掉一条。
+- 对**续接**没有害处：续接戳的 Power 段实机侧和模拟侧共用同一个方法，同样只读 `DynamicVars`，
+  两边一致，所以这类状态压根不进戳、也不会对不上。
+- 对**搜索去重**有害处：只在这个状态上不同的两条分支指纹相同，会被当成同一个状态去掉一条。
+  数值算得对，但算得对的那条可能被丢掉。**记风险标记解决不了这件事**，红字只是显示。
 
-原版有同样形状的牌（利爪、基因算法、巨锤、狂暴、镰刀、疯狂科学），求解器是在
-`ContinuationStamp` 里写了一个 `private=` 段，用 `switch (card)` 逐个列举的。**那个 switch 没有
-第三方登记入口**，`AppendPowers` 那边连对应的段都没有。所以这两张牌不是适配层能补的，需要求解器
-开一个「隐藏字段进指纹」的登记点。
+原版同形状的 Power（虚空形态、硬化外壳、自动机、束缚锁链）走的是另一条路：
+`AddTurnStartStates` 按类型 `switch`，从 `StateStore` 里的预测状态取一个计数进指纹。那个 `switch`
+原先没有第三方入口，所以上游开了一个：`PowerHiddenStateMirrors`（求解器 PR #58）。
 
-天人形态还有一个好消息：那个实例表不需要整体进指纹。`AddInstance` 之后
-`SetAmount(Instances.Sum())`，而 `AfterEnergyReset` 每回合给 `Instances.Sum()` 点能量再把每个实例
-加一——也就是说下一回合的总和等于当前总和加实例个数。`Amount` 已经在指纹里了，缺的只是**实例
-个数**这一个整数。
+适配层的用法在 `src/WatcherHiddenState.cs`：
+
+| 状态 | 存在哪 | 需要什么 |
+|---|---|---|
+| 累计真言 | `WatcherStatePower` 的普通私有 `int` | 只要读取函数。`MemberwiseClone` 会把普通字段带进克隆 |
+| 天人形态实例个数 | `DevaPower` 的 `_internalData` | 读取函数**加**根捕获。`PowerModel.DeepCloneFields` 会把 `_internalData` 重置成 `InitInternalData()`，所以克隆读到的是空表，必须在根捕获时读一次实机实例 |
+
+**天人形态为什么只需要一个整数。** `AddInstance` 之后 `SetAmount(Instances.Sum())`，而
+`AfterEnergyReset` 每回合先给 `Sum()` 点能量再把每个实例加一——下一回合的总和等于当前总和加实例
+个数。总和就是 `Amount`，本来就在指纹里。个数存在 `simulator.StateStore` 里（不能存在 Power 上，
+每次分叉都会被克隆重置），每回合的能量补在 `PersistentPowerSupport.TriggerAfterEnergyReset` 后面
+——那一段也没有注册点。
+
+**没有那个入口的求解器上会怎样。** 登记是可选绑定：绑不上就跳过。光辉的伤害照样算对，但会恢复
+记一条风险（只在累计真言不为零时）；天人形态的能量也照样算对（个数走 `StateStore`，与指纹无关），
+只是两条只在这些计数上不同的分支可能被去重。加载日志里那句
+「Power 隐藏状态进指纹：……」会写明走的是哪一边。
 
 #### 画符为什么是另一类
 

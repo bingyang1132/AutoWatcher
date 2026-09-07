@@ -1,7 +1,9 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
+using CombatSolver;
 using CombatSolver.Engine.Common.Mirrors;
 using CombatSolver.Engine.InCombat.Mirrors.Cards.OnPlay;
 using CombatSolver.Engine.InCombat.Simulation;
@@ -119,18 +121,22 @@ internal static partial class WatcherCardMirrors
 
     /// <summary>伤害加上本场战斗累计获得的真言。</summary>
     /// <remarks>
-    /// 这是唯一一张读 WatcherStatePower 私有计数器的牌。求解器的状态指纹不包含那个计数器，
-    /// 所以只在计数上不同的两条分支有被去重掉的可能。计数真的不为零时才记一条风险，把这个
-    /// 已知的不确定性说出来——为零时读到的值和指纹一致，没有风险可言。
+    /// 累计真言在 <c>WatcherStatePower</c> 的一个普通私有 <c>int</c> 里，读得到，所以伤害一直
+    /// 算得对。以前记风险不是因为数值不对，而是因为那个计数进不了状态指纹：只在计数上不同的
+    /// 两条分支指纹相同，会被当成同一个状态去掉一条——「先攒真言再打光辉」可能连搜索都到不了。
+    ///
+    /// 有 <c>PowerHiddenStateMirrors</c> 那个登记入口时（见 <see cref="WatcherHiddenState" />），
+    /// 计数进指纹，两条分支分得开，这条风险不存在了；没有那个入口的求解器上仍然记风险，
+    /// 而且只在计数不为零时记——为零时读到的值和指纹一致，没有风险可言。
     /// </remarks>
     private static void Brilliance(WatcherBrilliance card, CardOnPlayMirrorContext context)
     {
         int mantraGained = V.PeekState(context)?.TotalMantraGainedThisCombat ?? 0;
-        if (mantraGained > 0)
+        if (mantraGained > 0 && !WatcherHiddenState.MantraGainedInFingerprint)
         {
             V.Unmirrored(
                 context,
-                $"{card.Id.Entry} 的伤害取自累计真言 {mantraGained}，而该计数不在状态指纹里");
+                $"{card.Id.Entry} 的伤害取自累计真言 {mantraGained}，而这个求解器版本没有把它算进状态指纹");
         }
         V.AttackFor(context, card.DynamicVars.Damage.BaseValue + mantraGained);
     }
@@ -214,19 +220,36 @@ internal static partial class WatcherCardMirrors
         V.AddCards<WatcherSafety>(context, PileType.Hand, 1);
     }
 
-    /// <summary>第一张按数量 1 施加；第二张之后原版是往内部实例表里追加。</summary>
+    /// <summary>第一张按数量 1 施加；第二张之后原版是往内部实例表里追加一个 1。</summary>
     /// <remarks>
-    /// DevaPower 是 Counter 型且自己维护一个 List&lt;int&gt; 的实例表，N 张牌是 N 个独立成长的
-    /// 实例，不等于一个数量为 N 的实例。第二张之后没法用施加 Power 表达，所以记风险。
+    /// 两条分支对 <c>Amount</c> 的效果一样都是加一（<c>AfterApplied</c> 首次补一个 1，
+    /// <c>AddInstance</c> 追加一个 1，两者随后都 <c>SetAmount(Instances.Sum())</c>），差别只在
+    /// 走不走施加流程，所以照原版的分支写。
+    ///
+    /// 整张实例表不必复现：每回合先给总和点能量再把每个实例加一，等价于「总和每回合涨实例
+    /// 个数」。总和就是 <c>Amount</c>，缺的只有个数，存放和每回合的能量都在
+    /// <see cref="WatcherDevaInstances" />。
     /// </remarks>
     private static void DevaForm(WatcherDevaForm card, CardOnPlayMirrorContext context)
     {
+        Creature self = V.Self(context);
+        SimulatedCombatState combat = V.Combat(context);
         if (V.PowerAmount<DevaPower>(context) <= 0)
         {
             V.Power(context, typeof(DevaPower), 1);
+        }
+        else if (combat.GetMutablePower<DevaPower>(self) is { } existing)
+        {
+            combat.SetPowerAmount(existing, existing.Amount + 1);
+        }
+        else
+        {
+            V.Unmirrored(context, $"{card.Id.Entry} 取不到已有的天人形态实例");
             return;
         }
-        V.Unmirrored(context, $"{card.Id.Entry} 的第二张之后会追加一个独立的天人形态实例");
+
+        if (combat.GetPower<DevaPower>(self) is { } deva)
+            WatcherDevaInstances.AddInstance(context.Simulator, deva);
     }
 
     private static void Devotion(WatcherDevotion card, CardOnPlayMirrorContext context)

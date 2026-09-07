@@ -89,7 +89,9 @@
 
 [h2]已知缺口[/h2]
 
-有 3 张牌的效果显式记为未镜像：光辉、天人形态、画符。它们[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像的效果」。另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。近期会逐渐补齐
+只剩 1 张牌的效果显式记为未镜像：画符（mod 自加的先古卡，强度很低）。它[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像的效果」。另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。
+
+光辉在旧版求解器上会多记一条风险。它的伤害一直算得对，只是「本场累计获得的真言」这个计数要求解器开一个入口才能进搜索的状态判重
 
 [h2]常见问题[/h2]
 
@@ -166,8 +168,8 @@ count toward long-term value
 
 [h2]Known gaps[/h2]
 
-Three cards have effects explicitly recorded as unmirrored: Brilliance, Deva Form and Draw
-Talisman. They [b]never silently miscalculate[/b] — the solver marks the route in red
+Just one card's effect is still explicitly recorded as unmirrored: Draw Talisman (a weak Ancient
+card the mod adds itself). It [b]never silently miscalculates[/b] — the solver marks the route in red
 with "unmirrored effect here". A further set of hooks that run through Harmony postfixes, or that
 the solver does not dispatch, is also not covered. These will be filled in over the coming
 releases.
