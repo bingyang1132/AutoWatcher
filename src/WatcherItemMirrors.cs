@@ -3,8 +3,13 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.ValueProps;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.Card;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.TurnEnd;
+using CombatSolver;
+using CombatSolver.Engine.Common;
 using CombatSolver.Engine.InCombat.Mirrors.Potions.OnUse;
+using CombatSolver.Engine.InCombat.Simulation;
+using MegaCrit.Sts2.Core.Entities.Players;
 using WatcherMod;
+using S = AutoWatcher.WatcherStanceVerbs;
 using SV = AutoWatcher.WatcherSimVerbs;
 
 namespace AutoWatcher;
@@ -37,6 +42,8 @@ internal static class WatcherItemMirrors
         PotionOnUseMirrors.Registry.Register<Ambrosia>(AmbrosiaOnUse);
         PotionOnUseMirrors.Registry.Register<BottledMiracle>(BottledMiracleOnUse);
         PotionOnUseMirrors.Registry.Register<StancePotion>(StancePotionOnUse);
+        // 姿态药水的两个结果由这条登记展开成搜索分支，效果在 StancePotionChoiceApply 里施加。
+        PotionChoiceMirrors.Register<StancePotion>(StancePotionChoiceSpec, StancePotionChoiceApply);
     }
 
     // ---------- 遗物 ----------
@@ -112,37 +119,67 @@ internal static class WatcherItemMirrors
 
     /// <summary>姿态药水：在平静和愤怒之间二选一。</summary>
     /// <remarks>
-    /// 结果取决于玩家当场的选择，所以整瓶记为未建模的选择，不猜一个姿态——猜错会让求解器按错误的
-    /// 伤害倍率排路线。
+    /// 效果不在这里施加。挑哪个姿态是一次真正的搜索分支，走
+    /// <see cref="PotionChoiceMirrors"/>：候选由 <see cref="StancePotionChoiceSpec"/> 给出，
+    /// 结果由 <see cref="StancePotionChoiceApply"/> 施加。求解器的出牌展开会先调这个 OnUse 镜像、
+    /// 再调登记的 apply，所以这里保持空操作，不然姿态会被施加两次。
     ///
-    /// 这里原来写的理由是"原版按引用相等比较两张选项牌，没法从状态推出来"，那是错的。原版确实写的
-    /// 是 `val == calmChoice`，但两张选项牌是两个不同的类型（`WatcherStancePotionCalmChoice` 和
-    /// `WatcherStancePotionWrathChoice`），各只有一张，按类型判和按引用判在这里完全等价。
-    ///
-    /// 真正卡住的是第三方登记不进去。原语是有的：药水的选牌分支走 `PotionChoiceSupport`，
-    /// 用 `CardChoiceSpec` 加挂起选择，原版的攻击/技能/能力/无色四张三选一药水就是
-    /// `PlanChoiceEffect.GenerateToHand` 配 `PileType.None`，形状和这里要的一模一样。
-    ///
-    /// 挡住的是那三个写死的开关：`RequiresChoice` 是对原版药水类型的封闭类型判定
-    /// （四张生成牌的，加 Ashwater / DropletOfPrecognition / GamblersBrew / LiquidMemories /
-    /// TouchOfInsanity），第三方药水永远返回 false，于是求解器根本不为它开选择分支；
-    /// `GetSpec` 和 `Apply` 同样是封闭 switch，默认分支直接抛。
-    ///
-    /// 也就是说这个钩子（`PotionOnUseMirrors`）触发的时候，"要不要开分支"早就已经被否决了。
-    /// 要修的是给那三个开关加一个第三方登记表，和战略估值那条是同一个形状。
-    ///
-    /// 代价是实测过的：2026-09-06 鬼祟珊瑚群那一场，求解器第 1 回合 `max_block=14 actual_block=3`、
-    /// 掉 11 血；手打是「爆发+ 进愤怒 → 停顿 3+9=12 甲 → 如水 → 药水选平静退出愤怒」，如水在回合
-    /// 结束因为平静再给 5 甲，17 甲挡掉 14 点，0 掉血。问题包自己算出 `预计战损 11 → 0`。
-    /// 求解器不肯进愤怒的判断在它自己的世界观里是对的——进去了退不出来就是挨双倍伤害；
-    /// 错的是它不知道这瓶药能退出来。
+    /// 原版比的是引用相等（`val == calmChoice`），但两张选项牌是两个不同的类型、各只有一张，
+    /// 所以按类型判完全等价。
     /// </remarks>
     private static void StancePotionOnUse(StancePotion potion, PotionOnUseMirrorContext context)
     {
-        if (potion.Owner is not { } owner)
-            return;
+    }
+
+    /// <summary>形态药剂的两个候选：平静和愤怒，正好选一个。</summary>
+    /// <remarks>
+    /// 候选必须和原生页面上真正显示的那两张一致、顺序也一致，否则部署时按卡牌令牌在页面上定位
+    /// 会错位。原版的 <c>OnUse</c> 是先建平静再建愤怒，这里照同一个顺序。
+    ///
+    /// 下界取 1 而不是 0。原生页面允许一张都不选（`Min=0`），但"用了药水又什么都不选"只是白扔
+    /// 一瓶药，不值得多展开一条分支；要不要用这瓶药本来就是上一层的决定。
+    /// </remarks>
+    private static CardChoiceSpec StancePotionChoiceSpec(
+        CombatPredictionSimulator simulator,
+        StancePotion potion)
+    {
+        Player owner = potion.Owner;
+        List<PredictedCard> options =
+        [
+            PredictedCard.Create(CanonicalModels.Card<WatcherStancePotionCalmChoice>(), owner),
+            PredictedCard.Create(CanonicalModels.Card<WatcherStancePotionWrathChoice>(), owner),
+        ];
+        return new CardChoiceSpec(
+            PlanChoiceEffect.ModDefined,
+            PileType.None,
+            1,
+            1,
+            options,
+            options,
+            ReplacementValue: 0d);
+    }
+
+    private static bool StancePotionChoiceApply(
+        CombatPredictionSimulator simulator,
+        StancePotion potion,
+        PlanCardChoice choice)
+    {
+        if (choice.Cards.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"形态药剂应当正好选一张，实际 {choice.Cards.Count} 张。");
+        }
         WatcherSim sim = WatcherSim.From(
-            context.CombatState, context.Simulator, context.State, context.History, owner);
-        sim.PlayerChoice($"{potion.Id.Entry} 在平静和愤怒之间选一个姿态");
+            simulator.State.CombatState,
+            simulator,
+            simulator.State,
+            simulator.History,
+            potion.Owner);
+        // 按牌 ID 比，不写死字符串——ID 从规范实例上取，改了名也不会静默失配。
+        if (choice.Cards[0].CardId == CanonicalModels.Card<WatcherStancePotionCalmChoice>().Id.Entry)
+            S.EnterCalm(sim);
+        else
+            S.EnterWrath(sim);
+        return !simulator.HasPendingChoice;
     }
 }

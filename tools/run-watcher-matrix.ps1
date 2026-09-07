@@ -213,6 +213,30 @@ $cases = @(
         )
     },
     @{
+        # 形态药剂让玩家在平静和愤怒之间二选一。挑哪个是一次真正的搜索分支，走求解器的
+        # PotionChoiceMirrors 登记；不登记的话 PotionChoiceSupport.RequiresChoice 对第三方药水
+        # 恒为 false，求解器根本不为它开分支，这瓶药在模拟里就是个没有收益的空动作。
+        #
+        # 判据是算术的：敌人 18 血，手里只有爆发+（9 点伤害，打出后进入愤怒）。
+        # 先用药水进愤怒、再打爆发+ 才是 9×2=18 正好击杀；直接打爆发+ 只有 9 点，
+        # 第一回合杀不掉。所以"第一回合结束战斗"这一条只有药水的选择被建模了才成立。
+        # 顺带钉住选的是愤怒那张令牌，不是平静那张。
+        Id = "WATCHER-STANCE-POTION-WRATH-KILL"
+        Tags = @("hooks", "damage", "cards")
+        Why = "形态药剂的二选一是真分支。先用药水进愤怒，爆发+ 才够 18 点正好击杀。"
+        Args = @(
+            "-EnemyCurrentHp", "18", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-InitialPlayerMaxHp", "80",
+            "-InitialEnemyMoveIdsJson", '["ZOOM_MOVE"]',
+            "-CardsJson", (Hand @("WATCHER_ERUPTION_P")),
+            "-PotionsJson", '[{"potionId":"STANCE_POTION","slot":0}]',
+            "-ExpectedInitialFirstActionPotionId", "STANCE_POTION",
+            "-ExpectedInitialFirstActionChoiceCardId", "WATCHER_STANCE_POTION_WRATH_CHOICE",
+            "-ExpectedInitialCombatEndedTurn", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
         Id = "WATCHER-VIGILANCE-BLOCK"
         Tags = @("smoke", "stance")
         Why = "警戒给 8 点格挡。数值错了这条就过不去。"
