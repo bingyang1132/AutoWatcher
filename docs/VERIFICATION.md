@@ -360,6 +360,19 @@ public static bool RequiresChoice(PotionModel potion)
 
 要修的是给这三个开关加第三方登记表，和 `pr/third-party-strategic-effects` 是同一个形状。
 
+**已修。** 求解器那边加了 `PotionChoiceMirrors`（分支 `pr/third-party-potion-choice`）：三个开关
+各加一句查表前置，登记表为空时一句都不触发，原版行为一个字节不变。适配层在
+`src/WatcherItemMirrors.cs` 里登记形态药剂的 spec 和 apply，选项用两张真正的选择令牌，
+效果由 apply 自己施加；`StancePotionOnUse` 相应清空，否则姿态会被施加两次。
+新的 `PlanChoiceEffect.ModDefined` 只是表明"结算归登记方"，部署侧本来就是按卡牌令牌在原生页面
+上定位，与效果无关。
+
+- 实机验证：2026-09-06，作者在游戏里确认求解器现在会走「进愤怒吃停顿的加成，再用药水退出来」。
+- 回归锁：夹具 `WATCHER-STANCE-POTION-WRATH-KILL`。敌人 18 血、手里只有爆发+，先用药水进愤怒
+  才够 9×2=18 一回合击杀，同时钉住选的是愤怒那张令牌。
+- 反向对照：把 `PotionChoiceMirrors.Register<StancePotion>` 注掉重新构建，这条挂在
+  "结束回合为 3、预期为 1"；恢复登记后重新通过。
+
 顺带两点：
 
 - 这 7 处未建模选择里，姿态药水是**最便宜的一条**——它的选项根本不涉及牌，就是两个固定结果。

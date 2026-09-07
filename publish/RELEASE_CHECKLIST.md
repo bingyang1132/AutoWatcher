@@ -27,8 +27,15 @@
   补丁。这些不落地，别人装上跑不起来。其中 `pr/third-party-strategic-effects` 是以手拒之排序
   问题的修法，没有它那张牌会被排到攻击后面、白挨一回合。
   清单里 `CombatSolver.min_version` 现在写的是 `0.29.0`，**是错的**，等有了目标版本再定。
-- [x] **行为验收**：2026-09-06 17:56 全量 **24/24 通过**（含以手拒之排序那条新夹具）。
-      对的是 游戏 v0.111.0 + 观者 0.9.25 + 求解器 0.31.1 + `pr/third-party-strategic-effects`。
+- [x] **行为验收**：2026-09-06 19:51 全量 **25/25 通过**（含以手拒之排序和姿态药水两条新夹具）。
+      对的是 游戏 v0.111.0 + 观者 0.9.25 + 求解器 0.31.1 + `pr/third-party-strategic-effects`
+      + `pr/third-party-potion-choice`。
+
+      同一天 19:28 那一轮 24/25，挂的是姿态药水那条新夹具，**原因是夹具参数写错不是代码错**：
+      编了一个不存在的敌人行动 ID、用 `-EnemyCurrentHp` 把遭遇战里每只敌人都设成了 18、
+      没显式指定 `-PotionPolicyForTest RequireAtLeastOne`（默认 Smart 验的是药水估值的启发式，
+      不是二选一有没有展开成分支）。三条都记进夹具注释了。
+      反向对照做过：注掉 `PotionChoiceMirrors.Register<StancePotion>` 这条立刻挂，恢复即过。
 
       同一天早一轮 23 条只过了 22，`WATCHER-DEUS-EX-MACHINA-DRAW` 挂了；单独重跑 3 次全过，
       这一轮在批量里也过了。失败那轮我正在同一台机器上跑另一个 `dotnet publish`，而且那轮

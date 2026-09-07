@@ -221,15 +221,27 @@ $cases = @(
         # 先用药水进愤怒、再打爆发+ 才是 9×2=18 正好击杀；直接打爆发+ 只有 9 点，
         # 第一回合杀不掉。所以"第一回合结束战斗"这一条只有药水的选择被建模了才成立。
         # 顺带钉住选的是愤怒那张令牌，不是平静那张。
+        #
+        # 反向对照做过：把适配层里 PotionChoiceMirrors.Register<StancePotion> 注掉重新构建，
+        # 这条立刻挂在"结束回合为 3、预期为 1"。
+        #
+        # 写这条时踩的三个坑，别再踩：
+        #   1. 敌人血量要用 -InitialEnemyCurrentHpsJson "[18]" 指定成一个敌人。
+        #      -EnemyCurrentHp 是把遭遇战里每个敌人都设成那个值，多打几只就要多花回合。
+        #   2. 别自己编 -InitialEnemyMoveIdsJson 的行动 ID。编错了 harness 直接抛
+        #      "怪物 X 没有行动 Y"，而这条本来也不需要固定敌人行动。
+        #   3. 要显式 -PotionPolicyForTest RequireAtLeastOne。默认的 Smart 会先搜一条不用药水的
+        #      路线，再靠梯度审计判断这瓶药值不值 9 点血——那验的是药水估值的启发式，
+        #      不是"二选一有没有展开成分支"。强制用药才把判据收在要测的那一件事上。
         Id = "WATCHER-STANCE-POTION-WRATH-KILL"
         Tags = @("hooks", "damage", "cards")
         Why = "形态药剂的二选一是真分支。先用药水进愤怒，爆发+ 才够 18 点正好击杀。"
         Args = @(
-            "-EnemyCurrentHp", "18", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-InitialEnemyCurrentHpsJson", "[18]", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
             "-InitialPlayerMaxHp", "80",
-            "-InitialEnemyMoveIdsJson", '["ZOOM_MOVE"]',
             "-CardsJson", (Hand @("WATCHER_ERUPTION_P")),
             "-PotionsJson", '[{"potionId":"STANCE_POTION","slot":0}]',
+            "-PotionPolicyForTest", "RequireAtLeastOne",
             "-ExpectedInitialFirstActionPotionId", "STANCE_POTION",
             "-ExpectedInitialFirstActionChoiceCardId", "WATCHER_STANCE_POTION_WRATH_CHOICE",
             "-ExpectedInitialCombatEndedTurn", "1",
