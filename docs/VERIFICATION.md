@@ -312,6 +312,20 @@ dotnet build AutoWatcher.csproj -c Release
 折价取 `30`，和猎杀同档。夹具 `WATCHER-LESSON-LEARNED-FATAL-KILL`：敌人 8 血正好斩杀，
 `long_term_resource=30`、`long_term_goals=FatalKillBonus`。
 
+### 真言的战略估值
+
+登记在 [`src/WatcherStrategicEffects.cs`](../src/WatcherStrategicEffects.cs)，走求解器的 `StrategicEffectMirrors`。
+
+核对过的实现:`GainMantra` 里变更后 `Amount >= 10` 就减掉**正好 10** 并进神格（`Mantra.AfterPowerAmountChangedCompat`，`_isResolving` 闩锁让一次只转换一次，所以 0 到 20 只转一次、留下 10）；进神格给 **3 费**（`Divinity.AfterApplied`）；**已经在神格里再进不给费**（`ChangeStance` 的 `current == target` 直接返回）；神格**回合结束退出**（`Divinity.AfterSideTurnEnd`）。所以一个回合之内只兑得到一次 3 费。
+
+不登记的后果落在**刻度选错**，不是数值大小:默认兜底把第三方 Power 记进 `ScalingPotential`，于是「先祈祷把真言推到 10、进神格、用多出来的费打伤害」这条线在 `ClassifyActionOptionFamilies` 眼里完全不产生**资源**信号，祈祷和攻击的先后关系没有依据。这和以手拒之那条是同一类问题（那条错在防御信号，这条错在资源信号）。
+
+收益本身一直是精确模拟的——祈祷够了真的会进神格、真的会多 3 费。缺的只是让搜索在兑现**之前**就看得见这条线。
+
+取值取「离下一次兑现还差多少」，按 3 费封顶。**故意不把神格的伤害倍率算进去**:倍率在进入神格之后由模拟精确结算，而把「接近阈值」估得比一次兑现还高，正是会让求解器一直祈祷下去的那种估值。这一条和反弹格挡「宁可往高了估」的取舍方向相反，理由写在代码注释里。
+
+夹具 `WATCHER-MANTRA-TO-DIVINITY` 覆盖阈值转换本身；本次登记**改的是出牌顺序**，需要整条观者矩阵复核，见下。
+
 ### 局外成长额度：勤学精进与许愿的金币
 
 登记在 [`src/WatcherGrowthSources.cs`](../src/WatcherGrowthSources.cs)，走求解器的

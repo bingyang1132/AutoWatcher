@@ -38,5 +38,34 @@ internal static class WatcherStrategicEffects
                 Math.Max(1, power.Amount) * context.AttackPlays,
                 context),
             StrategicEffectHost.Enemy);
+
+        // 真言是**阈值资源**，不是线性叠加的增益。
+        //
+        // 核对过的实现：GainMantra 里变更后 Amount >= 10 就减掉正好 10 并进神格
+        // （Mantra.AfterPowerAmountChangedCompat，有 _isResolving 闩锁，一次只转换一次）；
+        // 进神格给 3 费（Divinity.AfterApplied）；已经在神格里再进不给费
+        // （ChangeStance 的 current == target 直接返回）；神格在回合结束退出
+        // （Divinity.AfterSideTurnEnd）。所以一回合之内只兑得到一次 3 费。
+        //
+        // 不登记的后果落在**刻度选错**上，而不是数值大小上：默认兜底把它记进
+        // ScalingPotential，于是「先祈祷把真言推到 10、进神格、用多出来的费打伤害」这条线在
+        // ClassifyActionOptionFamilies 眼里完全不产生**资源**信号，祈祷和攻击的先后关系就没有
+        // 依据。收益本身是精确模拟的——祈祷够了真的会进神格、真的会多 3 费——缺的只是让搜索在
+        // 兑现之前就看得见这条线。
+        //
+        // 取值：离下一次兑现还差多少，按 3 费封顶。故意**不**把神格的伤害倍率算进去：倍率在
+        // 进入神格之后由模拟精确结算，而把「接近阈值」这件事估得比一次兑现还高，正是让求解器
+        // 一直祈祷下去的那种估值。
+        StrategicEffectMirrors.Register<Mantra>(
+            StrategicEffectRequirements.None,
+            static (power, _) => StrategicEffectModel.Resource(
+                DivinityEnergyGain * Math.Min(DivinityMantraThreshold, Math.Max(0, power.Amount))
+                    / DivinityMantraThreshold));
     }
+
+    /// <summary>真言满这个数转神格，并从层数里减掉正好这个数。</summary>
+    private const int DivinityMantraThreshold = 10;
+
+    /// <summary>进入神格给的能量。已经在神格里再进不给。</summary>
+    private const int DivinityEnergyGain = 3;
 }
