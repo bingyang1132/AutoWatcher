@@ -77,9 +77,10 @@ When something breaks, check which pair you have installed first.
 
 ## Known gaps
 
-Eight effects are not modelled. They **never silently miscalculate** — the solver marks the route
-in red with "unmirrored effect here", so you can see it. The list is in the
-"显式记为未镜像的部分" section of [docs/VERIFICATION.md](docs/VERIFICATION.md).
+Five effects are explicitly recorded as unmirrored. They **never silently miscalculate** — the
+solver marks the route in red with "unmirrored effect here", so you can see it. A further set of
+hooks that run through Harmony postfixes, or that the solver does not dispatch, is also not
+covered. Both lists are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 The Talk to the Hand ordering problem is **fixed**. The solver used to refuse to reorder it ahead
 of your attacks to gain the block; the mirror was always correct, what was broken was the solver's

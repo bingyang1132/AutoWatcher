@@ -78,8 +78,9 @@
 
 [h2]已知缺口[/h2]
 
-有 8 处效果没有建模。它们[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像
-的效果」，你看得见。具体清单在 GitHub 的核对记录里。
+有 5 处效果显式记为未镜像。它们[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有
+未镜像的效果」，你看得见。另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。
+两份清单都在 GitHub 的核对记录里。
 
 「以手拒之」的排序问题已经修好。之前求解器不会为了起甲把它排到攻击牌前面，修法是在求解器
 那边开一个第三方登记入口，让「挂在敌人身上、收益归玩家」的效果也能进防御判定。所以本 Mod
@@ -168,9 +169,9 @@ long-term value
 
 [h2]Known gaps[/h2]
 
-Eight effects are not modelled. They [b]never silently miscalculate[/b] — the solver marks the
-route in red with "unmirrored effect here", so you can see it. The full list is in the
-verification notes on GitHub.
+Five effects are explicitly recorded as unmirrored. They [b]never silently miscalculate[/b] —
+the solver marks the route in red with "unmirrored effect here", so you can see it. A further set
+of hooks is also not covered. Both lists are in the verification notes on GitHub.
 
 The Talk to the Hand ordering problem is fixed. The solver used to refuse to reorder it ahead of
 your attacks to gain the block; the fix adds a third-party registration hook on the solver side so
