@@ -110,11 +110,59 @@ dotnet build AutoWatcher.csproj -c Release
 
 | 内容 | 原因 |
 |---|---|
-| `WATCHER_DRAW_TALISMAN` 的批量临时附魔 | 需要附魔系统的建模 |
-| `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 求解器的生成接口按牌类型创建规范实例，不接受实例级负载 |
-| `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 那个 Power 自己维护一个实例表，N 张牌是 N 个独立成长的实例，不等于一个数量为 N 的实例 |
-| `WATCHER_PRESSURE_POINTS` 的无视格挡伤害 | 带 Unblockable 和 Unpowered，动词层里没有对应形式。标记本身叠对了 |
-| `WATCHER_BRILLIANCE` 的伤害 | 取自 `WatcherStatePower` 的私有计数器，而该计数不在状态指纹里。只在计数不为零时才记风险 |
+| `WATCHER_BRILLIANCE` 的伤害 | 数值本身算对了，但它取自 `WatcherStatePower` 的私有字段，而指纹只收 `DynamicVars`。只在计数不为零时才记风险，见下面「隐藏字段这一类」 |
+| `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 同一类问题：实例数在 Power 的内部数据里，进不了指纹 |
+| `WATCHER_DRAW_TALISMAN` 的批量临时附魔 | 临时附魔栈是一张静态 `ConditionalWeakTable`，在模型状态之外，见下面「画符为什么是另一类」 |
+
+以下两条原先在这张表里，现已补齐：
+
+| 内容 | 怎么解决的 |
+|---|---|
+| `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 生成接口会把加进去的那张牌返回出来，拿到之后写 `HitCount` 即可——原版也是先建后赋值再入堆。落点是 `DynamicVars.Repeat`，普通数值变量，会进指纹 |
+| `WATCHER_PRESSURE_POINTS` 的无视格挡伤害 | 原版走的是 `CreatureCmd.Damage` 而不是 `DamageCmd.Attack`，求解器的 `Damage` 重载本身就收 `ValueProp`，照 `Unblockable \| Unpowered` 调即可。不能用攻击动词，那条路会套上全部攻击修正 |
+
+#### 隐藏字段这一类：光辉与天人形态
+
+两张牌卡在同一个地方，值得单独写清楚，免得下次又从头查一遍。
+
+状态指纹（`SimulatedCombatState.AddPower`）和续接戳（`ContinuationStamp.AppendPowers`）**都只收
+`DynamicVars`**。`WatcherStatePower._totalMantraGainedThisCombat` 和 `DevaPower` 的实例表都是普通
+私有字段，两边都看不见。
+
+- 对**续接**没有害处：实机那一侧读的是同一个模型，同样看不见，两边一致。
+- 对**搜索去重**有害处：只在这个计数上不同的两条分支指纹相同，会被当成同一个状态去掉一条。
+
+原版有同样形状的牌（利爪、基因算法、巨锤、狂暴、镰刀、疯狂科学），求解器是在
+`ContinuationStamp` 里写了一个 `private=` 段，用 `switch (card)` 逐个列举的。**那个 switch 没有
+第三方登记入口**，`AppendPowers` 那边连对应的段都没有。所以这两张牌不是适配层能补的，需要求解器
+开一个「隐藏字段进指纹」的登记点。
+
+天人形态还有一个好消息：那个实例表不需要整体进指纹。`AddInstance` 之后
+`SetAmount(Instances.Sum())`，而 `AfterEnergyReset` 每回合给 `Instances.Sum()` 点能量再把每个实例
+加一——也就是说下一回合的总和等于当前总和加实例个数。`Amount` 已经在指纹里了，缺的只是**实例
+个数**这一个整数。
+
+#### 画符为什么是另一类
+
+不是缺登记点，是那份状态根本不在模型里。`WatcherEnchantStack._extras` 是一张
+`static ConditionalWeakTable<CardModel, List<EnchantmentModel>>`，按牌的**对象标识**索引。求解器
+在克隆出来的预览牌上搜索，克隆件不在表里；反过来，在搜索中调 `ApplyTempEnchantment` 会把假设
+写进一张搜索结束后还在的全局静态表，污染实机。所以这个方法在搜索里一次都不能调。
+
+不过有两点比原先记的乐观：
+
+- **随机池只含纯改数值的附魔。** `RandomPool` 过滤掉了带 `OnEnchant` 或 `OnPlay` 覆写的，剩下的
+  只有 `ModifyCard()`。
+- **每张牌只加一条，而且落在原版那个附魔槽里。** `MagicNumber` 是 1，升级只改费用和保留，所以
+  `times` 恒为 1；`ApplyTempEnchantment` 在 `card.Enchantment == null` 时走的是
+  `card.EnchantInternal`，也就是原版单槽，而求解器**已经建模了那个槽**
+  （`PredictedCard.Enchant` / `EnchantmentStateSupport.Append`，槽本身进续接戳）。只有同一张牌上
+  的第二条才进 `_extras`。
+
+再加上它的随机数是 `new Rng(runSeed ^ (uint)(round * 2654435761u))`，完全可复现。所以这张牌是
+**可做但工作量大**：两个选项走 `CardChoiceMirrors`，逐牌复现随机抽取，用求解器的 `Enchant` 而不是
+观者的 `ApplyTempEnchantment`，并把 `CanApplyAsTempStack` 那几道门禁一起镜像过来。还要确认一件事：
+这些附魔是**临时**的（战斗结束清掉），别让求解器按永久附魔去算跨战斗价值。
 
 多人局专属牌（`WATCHER_COLD_OBSERVATION`、`WATCHER_MOCKERY`、`WATCHER_PERSUASION`、`WATCHER_RELINQUISH`、`WATCHER_SANCTIFICATION`）注册成记风险而不是空操作：求解器只支持
 单人战斗，万一它们出现要能立刻看见。

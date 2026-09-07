@@ -1,7 +1,9 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
+using CombatSolver;
 using CombatSolver.Engine.Common;
 using CombatSolver.Engine.Common.Mirrors;
 using CombatSolver.Engine.InCombat.Extensions;
@@ -266,13 +268,34 @@ internal static partial class WatcherCardMirrors
     /// <summary>先给目标叠标记，然后每个带标记的敌人按自己的标记层数吃一次穿透伤害。</summary>
     /// <remarks>
     /// 顺序要紧：标记先叠到本次目标上，所以那个目标这一跳就吃上了本次叠的层数。
-    /// 那一跳伤害带 Unblockable 和 Unpowered，无视格挡也无视一切伤害修正，动词层里没有对应
-    /// 形式，所以记风险。标记本身是叠对了的，缺的只是这一跳伤害。
+    ///
+    /// 那一跳不是攻击，原版走的是 <c>CreatureCmd.Damage</c> 而不是 <c>DamageCmd.Attack</c>，
+    /// 带 <c>Unblockable | Unpowered</c>：无视格挡，也不吃力量、易伤这类修正。所以这里不能用
+    /// <c>V.Attack</c>——那条路会套上全部攻击修正。求解器的 <c>Damage</c> 重载本身就收
+    /// <c>ValueProp</c>，原版好几张牌（见 <c>CardEffectSpecRegistry</c>）也是同一个 props 组合，
+    /// 照那个形状调即可。
+    ///
+    /// 敌人列表照原版先快照再遍历（原版是 <c>HittableEnemies.ToList()</c>）：遍历途中有敌人被
+    /// 打死时，两种写法的差别是死掉那个还要不要继续算，快照语义才是原版的。
     /// </remarks>
     private static void PressurePoints(WatcherPressurePoints card, CardOnPlayMirrorContext context)
     {
         V.PowerOnTarget(context, typeof(MarkPower), VarInt(card, "MagicNumber"));
-        V.Unmirrored(context, $"{card.Id.Entry} 让每个带标记的敌人按层数吃一次无视格挡的伤害");
+        SimulatedCombatState combat = V.Combat(context);
+        Creature self = V.Self(context);
+        foreach (Creature enemy in combat.HittableEnemies.ToList())
+        {
+            int marks = combat.GetAmount<MarkPower>(enemy);
+            if (marks <= 0)
+                continue;
+            context.Simulator.Damage(
+                [enemy],
+                marks,
+                ValueProp.Unblockable | ValueProp.Unpowered,
+                self,
+                context.Card,
+                context.CardPlay);
+        }
     }
 
     private static void Prostrate(WatcherProstrate card, CardOnPlayMirrorContext context)

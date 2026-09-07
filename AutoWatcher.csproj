@@ -9,7 +9,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>AutoWatcher</RootNamespace>
     <AssemblyName>AutoWatcher</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
 
     <SteamRoot Condition="'$(SteamRoot)' == '' and '$(OS)' == 'Windows_NT' and Exists('D:/Steam')">D:/Steam</SteamRoot>
     <SteamRoot Condition="'$(SteamRoot)' == '' and '$(OS)' == 'Windows_NT'">$(MSBuildProgramFiles32)/Steam</SteamRoot>
@@ -69,8 +69,9 @@
   </Target>
 
   <PropertyGroup>
-    <!-- 观者 v0.9.25 (Workshop 3747526116)，2026-09-04 逐条核对 -->
-    <VerifiedWatcherDllSha256>9b6d6b8806e37b07a83576fef766a07aa42fc642168fa2c3e58e148c6f377733</VerifiedWatcherDllSha256>
+    <!-- 观者 v0.9.27 (Workshop 3747526116)。逐条核对是在 0.9.25 上做的，
+         0.9.25 → 0.9.27 的反编译 diff 全在 VFX，见 src/PinnedTargets.cs 的注释 -->
+    <VerifiedWatcherDllSha256>55b477aabfea1117a2dec91b8f9bc51ecc3d813da0911d285a03facd62701eb3</VerifiedWatcherDllSha256>
   </PropertyGroup>
 
   <Target Name="CopyMod" AfterTargets="Build" Condition="'$(CopyModOnBuild)' == 'true'">

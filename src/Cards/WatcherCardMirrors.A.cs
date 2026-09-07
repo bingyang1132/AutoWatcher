@@ -165,17 +165,24 @@ internal static partial class WatcherCardMirrors
 
     /// <summary>X 费：生成一张灭除之刃，其打击次数等于实付能量。</summary>
     /// <remarks>
-    /// 生成的牌本身能镜像，但没法在生成时把 Repeat 设成 X 值——求解器的生成接口按牌类型创建
-    /// 规范实例，不接受实例级的负载。所以这里记一条风险：那张灭除之刃会按默认的 1 次算。
+    /// 生成接口按牌类型创建规范实例，不接受实例级的负载，但它把加进去的那张牌返回出来，拿到
+    /// 之后照原版那样写 <c>HitCount</c> 即可——原版就是先 <c>CreateCard</c> 再赋值再入堆。
+    /// <c>HitCount</c> 的落点是 <c>DynamicVars.Repeat.BaseValue</c>，而 Repeat 是个普通数值变量，
+    /// <c>SemanticStateFieldPolicy</c> 把它算成 Behavior，所以次数会进状态指纹和续接戳，
+    /// 两条只在次数上不同的分支不会被去重掉，实机续算也不会因为这一格对不上而作废。
+    /// 升级版的写法和洞察那条一致：改的是生成结果，不是规范实例。
     /// </remarks>
     private static void ConjureBlade(WatcherConjureBlade card, CardOnPlayMirrorContext context)
     {
         int amount = context.Card.ResolveEnergyXValue(context.State) + (card.IsUpgraded ? 1 : 0);
         if (amount <= 0)
             return;
-        V.AddCards<WatcherExpunger>(context, PileType.Draw, 1, CardPilePosition.Random);
-        if (amount != 1)
-            V.Unmirrored(context, $"{card.Id.Entry} 生成的灭除之刃打击次数应为 {amount}，镜像按默认 1 次算");
+        foreach (SimCardPileAddResult added in context.Simulator
+                     .CreateAndAddGeneratedCardsToCombat<WatcherExpunger>(
+                         card.Owner, PileType.Draw, 1, card.Owner, CardPilePosition.Random))
+        {
+            ((WatcherExpunger)added.CardAdded.MutablePreview).HitCount = amount;
+        }
     }
 
     private static void Consecrate(WatcherConsecrate card, CardOnPlayMirrorContext context)

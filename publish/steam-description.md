@@ -89,7 +89,7 @@
 
 [h2]已知缺口[/h2]
 
-有 5 张牌的效果显式记为未镜像，包括点穴、天人形态、聚能成刃。它们[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像的效果」。另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。近期会逐渐补齐
+有 3 张牌的效果显式记为未镜像：光辉、天人形态、画符。它们[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像的效果」。另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。近期会逐渐补齐
 
 [h2]常见问题[/h2]
 
@@ -166,8 +166,8 @@ count toward long-term value
 
 [h2]Known gaps[/h2]
 
-Five cards have effects explicitly recorded as unmirrored, among them Pressure Points, Deva Form
-and Conjure Blade. They [b]never silently miscalculate[/b] — the solver marks the route in red
+Three cards have effects explicitly recorded as unmirrored: Brilliance, Deva Form and Draw
+Talisman. They [b]never silently miscalculate[/b] — the solver marks the route in red
 with "unmirrored effect here". A further set of hooks that run through Harmony postfixes, or that
 the solver does not dispatch, is also not covered. These will be filled in over the coming
 releases.

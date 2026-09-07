@@ -3,7 +3,7 @@
   "name": "自动观者",
   "author": "bingyang1132",
   "description": "教战斗路线求解器预测观者角色的牌与姿态。本 mod 不改变任何游戏行为，只补上求解器缺失的模拟镜像。需要同时装有战斗路线求解器和观者 mod。",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "has_pck": false,
   "has_dll": true,
   "affects_gameplay": false,

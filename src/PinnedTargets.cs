@@ -57,9 +57,20 @@ internal static class PinnedTargets
     /// </remarks>
     public static readonly Version CombatSolverMinimumVersion = new(0, 32, 0);
 
-    /// <summary>已经逐个动词核对过的那一份观者：v0.9.25，Workshop 3747526116，2026-09-04。</summary>
+    /// <summary>已经逐个动词核对过的那一份观者：v0.9.27，Workshop 3747526116。</summary>
+    /// <remarks>
+    /// 逐个动词的核对是在 v0.9.25 上做的。抬到 0.9.27 不是重新核对了一遍，而是把两版反编译出来
+    /// 整体 diff 过：605 行改动**全在 VFX**（新增 <c>StsWaveGhostEffect</c>、
+    /// <c>StsWaveProjectileEffect</c>、<c>WaveCrescent</c>，几处描边颜色与透明度，
+    /// 一个着色器字符串的换行符），<c>OnPlay</c>、<c>CanonicalVars</c>、<c>DynamicVars[...]</c>
+    /// 的改动是 0 条，适配层依赖的十个类型和辅助类一个都没被碰到。所以 0.9.25 的核对结论对
+    /// 0.9.27 成立。证据见 docs/VERIFICATION.md「观者 0.9.25 → 0.9.27」。
+    ///
+    /// 抬这个常量的实际作用是让工坊用户不再看到「这一份观者不是核对过的那一版」那句警告——
+    /// 那句话本身是对的，但对着一个只改了特效的版本发警告，只会让真正该注意的时候没人看。
+    /// </remarks>
     public const string VerifiedWatcherDllSha256 =
-        "9b6d6b8806e37b07a83576fef766a07aa42fc642168fa2c3e58e148c6f377733";
+        "55b477aabfea1117a2dec91b8f9bc51ecc3d813da0911d285a03facd62701eb3";
 
     public static string? TryComputeSha256(Assembly assembly)
     {
