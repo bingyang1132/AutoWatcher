@@ -22,8 +22,8 @@ namespace AutoWatcher;
 /// 的攻击都按神圣的伤害倍率算，路线会被系统性地高估。
 ///
 /// 这里用 Harmony 而不是注册表，是因为这个位置根本没有注册表。求解器把玩家侧回合结束的 Power
-/// 效果写成了一段硬编码流程，<c>CorePowerSupport.TriggerPlayerSideTurnEndEffects</c> 是它的收尾，
-/// 补在它后面语义上正好对应 <c>AfterSideTurnEnd</c>。
+/// 效果写成了一段硬编码流程，补在那段流程的收尾之后，语义上正好对应 <c>AfterSideTurnEnd</c>。
+/// 那个收尾在 0.32.0 和 0.33.0 上是两个不同的方法，见 <see cref="ResolveTarget" />。
 ///
 /// 代价是这条依赖求解器的一个内部方法名和签名。所以 <see cref="ResolveTarget" /> 解析不到就
 /// 直接抛异常，让整个适配层的注册失败、求解器停在第三方检查上——宁可明确不可用，也不要装着
@@ -31,15 +31,60 @@ namespace AutoWatcher;
 /// </remarks>
 internal static class WatcherTurnEndPatch
 {
-    public static MethodInfo ResolveTarget()
-        => AccessTools.Method(
-               typeof(CorePowerSupport),
-               nameof(CorePowerSupport.TriggerPlayerSideTurnEndEffects))
-           ?? throw new MissingMethodException(
-               nameof(CorePowerSupport),
-               nameof(CorePowerSupport.TriggerPlayerSideTurnEndEffects));
+    /// <summary>0.33.0 起玩家回合结束被拆成两段，这一段的末尾才是原来那个位置。</summary>
+    private const string LifecycleTypeName = "CombatSolver.PlayerTurnEndLifecycle";
+    private const string LifecycleMethodName = "RunPhaseTwo";
+
+    /// <summary>0.32.0 及更早的整段流程。</summary>
+    private const string LegacyMethodName = "TriggerPlayerSideTurnEndEffects";
+
+    /// <summary>
+    /// 找出该补在哪里，并给出对应的 Postfix 名字。
+    /// </summary>
+    /// <remarks>
+    /// 求解器 0.33.0 把 <c>CorePowerSupport.TriggerPlayerSideTurnEndEffects</c> 拆开了：改名成
+    /// <c>TriggerPlayerRegularSideTurnEndEffects</c>，并把结尾的 <c>EndTurnPowerSupport.TriggerLate</c>
+    /// 和 <c>NormalizeCardAfflictions</c> 挪到了 <c>PlayerTurnEndLifecycle.RunPhaseTwo</c> 的末尾。
+    ///
+    /// <b>所以新版该补 <c>RunPhaseTwo</c>，不是补那个改了名的方法。</b> 观者的回合结束效果里有
+    /// 终焉的群体伤害，它跑在晚阶段 Power 之前还是之后是有区别的；补在 <c>RunPhaseTwo</c> 末尾
+    /// 才和 0.32.0 上验过的位置一致。
+    ///
+    /// 两个名字都不能写成 <c>nameof</c>：各自只存在于一边，写死引用会让程序集在另一边编译不过、
+    /// 装上也起不来。所以按字符串找，找到哪个用哪个。
+    ///
+    /// Harmony 按参数名注入，而两版的那个参数一个叫 <c>players</c> 一个叫 <c>participants</c>，
+    /// 所以两个 Postfix 只是签名不同的薄壳，逻辑都在 <see cref="RunAll" />。
+    /// </remarks>
+    public static (MethodInfo Target, string PostfixName) ResolveTarget()
+    {
+        Type? lifecycle = typeof(CorePowerSupport).Assembly
+            .GetType(LifecycleTypeName, throwOnError: false);
+        if (lifecycle is not null
+            && AccessTools.Method(lifecycle, LifecycleMethodName) is { } phaseTwo)
+        {
+            return (phaseTwo, nameof(PostfixParticipants));
+        }
+        if (AccessTools.Method(typeof(CorePowerSupport), LegacyMethodName) is { } legacy)
+            return (legacy, nameof(Postfix));
+        throw new MissingMethodException(
+            $"{LifecycleTypeName}/{nameof(CorePowerSupport)}",
+            $"{LifecycleMethodName}/{LegacyMethodName}");
+    }
 
     public static void Postfix(
+        CombatPredictionSimulator simulator,
+        SimulatedCombatState combat,
+        IReadOnlyList<Creature> players)
+        => RunAll(simulator, combat, players);
+
+    public static void PostfixParticipants(
+        CombatPredictionSimulator simulator,
+        SimulatedCombatState combat,
+        IReadOnlyList<Creature> participants)
+        => RunAll(simulator, combat, participants);
+
+    private static void RunAll(
         CombatPredictionSimulator simulator,
         SimulatedCombatState combat,
         IReadOnlyList<Creature> players)

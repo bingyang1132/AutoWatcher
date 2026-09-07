@@ -118,7 +118,7 @@ dotnet build AutoWatcher.csproj -c Release
 |---|---|
 | `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 生成接口会把加进去的那张牌返回出来，拿到之后写 `HitCount` 即可——原版也是先建后赋值再入堆。落点是 `DynamicVars.Repeat`，普通数值变量，会进指纹 |
 | `WATCHER_PRESSURE_POINTS` 的无视格挡伤害 | 原版走的是 `CreatureCmd.Damage` 而不是 `DamageCmd.Attack`，求解器的 `Damage` 重载本身就收 `ValueProp`，照 `Unblockable \| Unpowered` 调即可。不能用攻击动词，那条路会套上全部攻击修正 |
-| `WATCHER_BRILLIANCE` 的伤害 | 数值一直算得对，缺的是累计真言进指纹。求解器开了 `PowerHiddenStateMirrors` 之后登记一个读取函数即可，见下面「隐藏状态这一类」 |
+| `WATCHER_BRILLIANCE` 的伤害 | 数值一直算得对，缺的是累计真言进指纹。求解器 0.33.0 起有 `PowerHiddenStateMirrors`，登记一个读取函数即可，见下面「隐藏状态这一类」 |
 | `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 整张实例表不必复现，只需要多记一个「实例个数」。见下面「隐藏状态这一类」 |
 
 #### 隐藏状态这一类：光辉与天人形态
@@ -135,7 +135,7 @@ dotnet build AutoWatcher.csproj -c Release
 
 原版同形状的 Power（虚空形态、硬化外壳、自动机、束缚锁链）走的是另一条路：
 `AddTurnStartStates` 按类型 `switch`，从 `StateStore` 里的预测状态取一个计数进指纹。那个 `switch`
-原先没有第三方入口，所以上游开了一个：`PowerHiddenStateMirrors`（求解器 PR #58）。
+原先没有第三方入口，所以上游开了一个：`PowerHiddenStateMirrors`，随求解器 **0.33.0** 发布（PR #58）。
 
 适配层的用法在 `src/WatcherHiddenState.cs`：
 
@@ -150,10 +150,18 @@ dotnet build AutoWatcher.csproj -c Release
 每次分叉都会被克隆重置），每回合的能量补在 `PersistentPowerSupport.TriggerAfterEnergyReset` 后面
 ——那一段也没有注册点。
 
-**没有那个入口的求解器上会怎样。** 登记是可选绑定：绑不上就跳过。光辉的伤害照样算对，但会恢复
-记一条风险（只在累计真言不为零时）；天人形态的能量也照样算对（个数走 `StateStore`，与指纹无关），
-只是两条只在这些计数上不同的分支可能被去重。加载日志里那句
+**0.32.0 上会怎样**（创意工坊现在还是这一版）。登记是可选绑定：绑不上就跳过。光辉的伤害照样
+算对，但会恢复记一条风险（只在累计真言不为零时）；天人形态的能量也照样算对（个数走
+`StateStore`，与指纹无关），只是两条只在这些计数上不同的分支可能被去重。加载日志里那句
 「Power 隐藏状态进指纹：……」会写明走的是哪一边。
+
+**顺带记一处 0.33.0 的破坏性改动。** `CorePowerSupport.TriggerPlayerSideTurnEndEffects` 被拆开了：
+改名成 `TriggerPlayerRegularSideTurnEndEffects`，结尾的 `EndTurnPowerSupport.TriggerLate` 和
+`NormalizeCardAfflictions` 挪进了 `PlayerTurnEndLifecycle.RunPhaseTwo`。观者回合结束那条补丁
+（神圣退出、终焉群体伤害等）原来补在前者后面，现在要补 `RunPhaseTwo` 才是同一个语义位置——终焉的
+群体伤害跑在晚阶段 Power 之前还是之后是有区别的。两个名字都按字符串找，一份 DLL 同时对得上
+0.32.0 和 0.33.x；Harmony 按参数名注入，而两版那个参数分别叫 `players` 和 `participants`，
+所以有两个只差签名的 Postfix 薄壳。
 
 #### 画符为什么是另一类
 

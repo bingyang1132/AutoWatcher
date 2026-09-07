@@ -76,9 +76,12 @@ public static class Entry
         // AfterSideTurnEnd、回合开始的遗物与 Power 流程、手牌保留的成长、额外回合的来源。
         // 目标方法解析不到就在这里抛出去，让整个注册失败。
         var harmony = new Harmony(ModId);
+        // 回合结束那条的目标方法在 0.33.0 换了位置，所以目标和 Postfix 名字一起解析出来。
+        (System.Reflection.MethodInfo turnEndTarget, string turnEndPostfix) =
+            WatcherTurnEndPatch.ResolveTarget();
         harmony.Patch(
-            WatcherTurnEndPatch.ResolveTarget(),
-            postfix: new HarmonyMethod(typeof(WatcherTurnEndPatch), nameof(WatcherTurnEndPatch.Postfix)));
+            turnEndTarget,
+            postfix: new HarmonyMethod(typeof(WatcherTurnEndPatch), turnEndPostfix));
         harmony.Patch(
             WatcherRetainPatch.ResolveTarget(),
             prefix: new HarmonyMethod(typeof(WatcherRetainPatch), nameof(WatcherRetainPatch.Prefix)),
