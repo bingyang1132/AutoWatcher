@@ -64,17 +64,24 @@ $solverDeployedDll = Join-Path $GameRoot "mods\CombatSolver\CombatSolver.dll"
 foreach ($required in @($solverBuildDll, $solverDeployedDll)) {
     if (-not (Test-Path -LiteralPath $required)) { throw "找不到求解器：$required" }
 }
+# 比的是内容哈希，不是版本号。本地开发时版本号常常几十个提交都不动，只比版本号会漏掉
+# "两份都是 0.31.1.0 但代码不一样"这种情况——而那正是最容易出现、也最难看出来的一种。
 $buildVersion = [Reflection.AssemblyName]::GetAssemblyName($solverBuildDll).Version
-$deployedVersion = [Reflection.AssemblyName]::GetAssemblyName($solverDeployedDll).Version
-if ($buildVersion -ne $deployedVersion) {
+$buildHash = (Get-FileHash -LiteralPath $solverBuildDll -Algorithm SHA256).Hash
+$deployedHash = (Get-FileHash -LiteralPath $solverDeployedDll -Algorithm SHA256).Hash
+if ($buildHash -ne $deployedHash) {
+    $deployedVersion = [Reflection.AssemblyName]::GetAssemblyName($solverDeployedDll).Version
     throw @"
-求解器版本对不上，先不要跑：
-  harness 用的 Release 构建产物 $solverBuildDll 是 $buildVersion
-  适配层编译时引用的     $solverDeployedDll 是 $deployedVersion
-先在求解器仓库跑一次 dotnet build CombatSolver.csproj -c Release，再重新构建适配层。
+求解器的两份产物内容不一样，先不要跑：
+  harness 用的 Release 构建产物 $solverBuildDll
+    版本 $buildVersion 哈希 $buildHash
+  适配层编译时引用的     $solverDeployedDll
+    版本 $deployedVersion 哈希 $deployedHash
+先在求解器仓库跑一次 dotnet build CombatSolver.csproj -c Release（它会顺带部署到 mods/），
+再重新构建适配层。
 "@
 }
-Write-Host "求解器版本 $buildVersion（构建产物与部署一致）" -ForegroundColor DarkGray
+Write-Host "求解器 $buildVersion 构建产物与部署一致（$($buildHash.Substring(0, 12))）" -ForegroundColor DarkGray
 
 
 # 整个矩阵要跑好几分钟，一定是放后台跑的。而 PowerShell 的标准输出要等进程退出才刷出来，
