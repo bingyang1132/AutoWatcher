@@ -48,7 +48,7 @@ brought back in line. Hence two channels:
 
 | Channel | Targets | Where |
 |---|---|---|
-| **Steam Workshop** | *released* solver builds (0.32.0 and up) | just subscribe |
+| **Steam Workshop** | *released* solver builds (0.32.0 and up) | [subscribe](https://steamcommunity.com/sharedfiles/filedetails/?id=3797303841) |
 | **GitHub** | one specific solver version, possibly a development build | [Releases](https://github.com/bingyang1132/AutoWatcher/releases) |
 
 Most people want the Workshop one. Every GitHub release states **which** solver version it was

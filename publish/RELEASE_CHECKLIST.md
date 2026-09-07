@@ -76,16 +76,20 @@
 - [x] 上传器支持分语言描述。原来不支持，已给 `sts2-mod-uploader` 加 `localizations` 字段
       （commit `9043bb8`），新 exe 已装进 `ModUploader-win-x64/`，旧的留成
       `ModUploader.exe.bak-before-localizations`
-- [ ] 首次上传后把生成的 `mod_id.txt` 留在工作区
-- [ ] 可见性从 `private` 改 `public`（先私有传一次，自己订阅装一遍确认能加载）
+- [x] 首次上传完成：**item id `3797303841`**，`mod_id.txt` 已在工作区，别删——以后更新靠它认条目。
+      条目页 https://steamcommunity.com/sharedfiles/filedetails/?id=3797303841
+      上传时中英两份标题描述都上了，三个依赖也都加上了
+- [ ] 可见性从 `private` 改 `public`。**下一步在作者手里**：自己订阅装一遍确认能加载，
+      确认了再把 `publish/steam-description.md` 同目录的 `workshop.json` 里 `visibility`
+      改成 `public` 重传一次
 
 ## 清单（`AutoWatcher.json`）
 
 - [x] `id` = `AutoWatcher`，`name` = `自动观者`
 - [x] `affects_gameplay: false` —— 这条要保持，适配层不改任何游戏行为
-- [ ] `CombatSolver.min_version` 改成真正含扩展点的那一版
+- [x] `CombatSolver.min_version` = `0.32.0`（第一个发布产物里就带全五条登记入口的版本）
 - [ ] `Watcher.min_version` 复核（现写 `0.9.25`，和钉死的哈希是同一版）
-- [ ] `version` 从 `0.1.0` 抬到发布版本号
+- [x] `version` = `1.0.0`
 
 ## GitHub 仓库
 
@@ -96,15 +100,16 @@
       RitsuLib 四个程序集的引用关系
 - [x] `.gitignore` 复核：`local.props`、`bin`、`obj`、`.godot` 都不进仓库；仓库里没有任何
       第三方二进制
-- [ ] 建远端仓库（现在本地无 remote），名字 `AutoWatcher`
+- [x] 远端仓库 https://github.com/bingyang1132/AutoWatcher （public，默认分支 `main`）
 - [ ] 本地目录还叫 `SolverWatcherAdapter`。要不要跟着改成 `AutoWatcher` 由你定 ——
       改了会动到无头 harness 的按路径哈希的实例目录
-- [ ] Release 说明模板：写清这一版对标哪个求解器版本，并给出那一版的下载链接
+- [x] `publish/RELEASE_NOTES_TEMPLATE.md`；v1.0.0 已按它发布
 
 ## 发布前的加固
 
-- [ ] 观者的**精确哈希钉死**换成「最低版本 + 结构自检」。哈希钉死会在观者每次更新时直接砖掉。
-      自检要核对用到的那几个方法签名和两个私有字段还在不在，不在就干净地拒绝加载
-- [ ] 求解器的**严格版本相等**换成最低版本
+- [x] 观者的精确哈希钉死换成「结构自检 + 核对标记」（`src/AdapterSelfCheck.cs`）。
+      观者不能按版本号判——`Watcher.dll` 的 `AssemblyVersion` 是 `0.0.0.0`，真正的版本只在
+      `Watcher.json` 里。哈希降级成「这一版核对过没有」，不一致仍加载但日志明确警告
+- [x] 求解器的严格版本相等换成最低版本 `0.32.0`，外加对五个登记入口的结构自检
 - [ ] 决定 8 处已知缺口哪些随版本发。我的看法是全部可以发 —— 没有一处会静默算错，
       那正是红字的用途 —— 创意工坊页面和两份 README 都已经写清楚了

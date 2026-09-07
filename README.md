@@ -31,7 +31,7 @@
 
 | 版本 | 对标 | 从哪拿 |
 |---|---|---|
-| **创意工坊版** | 求解器的**发布版**（0.32.0 起） | 订阅即可 |
+| **创意工坊版** | 求解器的**发布版**（0.32.0 起） | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3797303841) 订阅即可 |
 | **GitHub 版** | 某一个确定的求解器版本，可能是开发版 | [Releases](https://github.com/bingyang1132/AutoWatcher/releases) |
 
 普通情况用工坊版就行。GitHub 的每个 release 会写明它对标**哪一个**求解器版本并给出链接，用于跟进还没发布的求解器改动。
