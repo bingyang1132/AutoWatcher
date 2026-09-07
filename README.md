@@ -12,26 +12,40 @@
 
 ## 需要装什么
 
-| 依赖 | 说明 |
-|---|---|
-| 自动战斗求解器（CombatSolver） | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) ／ [GitHub](https://github.com/Torch1230/CombatSolver) |
-| 观者（Watcher，作者 Boninall） | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
-| RitsuLib | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
+| 依赖 | 版本要求 | 说明 |
+|---|---|---|
+| 自动战斗求解器（CombatSolver） | **至少 0.32.0** | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) ／ [GitHub](https://github.com/Torch1230/CombatSolver) |
+| 观者（Watcher，作者 Boninall） | 0.9.25 起 | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
+| RitsuLib | — | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
 
 三个都要装。缺任何一个，本 Mod 都不会加载，也不会留下半装的状态。
+
+**求解器为什么要 0.32.0 以上。** 适配层要把观者的效果登记进求解器的内部注册表，而这些登记
+入口是逐版加进去的——0.32.0 是第一个发布产物里就带全五条（第三方战略估值、药水选择、
+卡牌选择、牌堆弃牌、可打出性覆盖）的版本。
+
+**版本不对会怎样。** 不会静默出错：
+
+- 求解器低于 0.32.0，或者缺了某个登记入口 → 本 Mod **干净地拒绝加载**，日志里写明缺什么、
+  要你去哪拿新版，一个镜像都不注册。求解器会照常停在它自己那道第三方检查上。
+- 观者更新了 → 只要它的内部结构没变，本 Mod 照常工作；结构变了就同样拒绝加载。
+  但要提醒一句：观者可以在不改任何签名的情况下改数值或改效果，那种情况自检抓不到，
+  日志里会写「这一份观者不是逐条核对过的那一版」。看到那句话又觉得路线不对，请报 Bug。
 
 ## 两个版本
 
 **求解器还在持续开发，本 Mod 跟着它走。** 适配层是贴着求解器的内部接口写的，
-求解器一改，适配层就得跟一次。所以这里分两条线发布：
+求解器一改，适配层就可能得跟一次。所以这里分两条线发布：
 
 | 版本 | 对标 | 从哪拿 |
 |---|---|---|
-| **创意工坊版** | 创意工坊上的求解器 + 创意工坊上的观者 | 订阅即可，随求解器的工坊版本更新 |
-| **GitHub 版** | 我们自己的开发版求解器 | [Releases](https://github.com/bingyang1132/AutoWatcher/releases) |
+| **创意工坊版** | 求解器的**发布版**（0.32.0 起） | 订阅即可 |
+| **GitHub 版** | 某一个确定的求解器版本，可能是开发版 | [Releases](https://github.com/bingyang1132/AutoWatcher/releases) |
 
-GitHub 的每个 release 里放两样东西：本 Mod 的构建产物，和它对应的**那一个**求解器版本的链接。
-两者要配套用——拿工坊版求解器配 GitHub 版适配层，或者反过来，都可能对不上。
+绝大多数人用工坊版就行。GitHub 的每个 release 会写明它对标**哪一个**求解器版本并给出链接，
+用于跟进还没发布的求解器改动。
+
+两条线不要混着装。混了也不会静默出错——结构自检对不上就拒绝加载——但没必要。
 
 出了问题优先看你装的是哪一对。
 

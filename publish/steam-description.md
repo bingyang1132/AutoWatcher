@@ -34,26 +34,31 @@
 [h2]需要装什么[/h2]
 
 [list]
-[*]自动战斗求解器
-[*]观者（作者 Boninall）
+[*]自动战斗求解器，[b]至少 0.32.0[/b]
+[*]观者（作者 Boninall），0.9.25 起
 [*]RitsuLib
 [/list]
 
 三个都要装。缺任何一个，本 Mod 都不会加载，也不会留下半装的状态。
+
+求解器要 0.32.0 以上，是因为适配层要把观者的效果登记进它的内部注册表，而这些登记入口是逐版
+加进去的——0.32.0 是第一个发布产物里就带全的版本。
+
+版本不对不会静默出错：求解器太旧或缺了登记入口，本 Mod 会干净地拒绝加载，日志里写明缺什么，
+一个镜像都不注册。
 
 [h2]求解器还在持续开发，本 Mod 跟着它走[/h2]
 
 适配层是贴着求解器的内部接口写的，求解器一改，适配层就得跟一次。所以本 Mod 分两条线发布：
 
 [list]
-[*][b]创意工坊版[/b]，也就是你现在看的这个 —— 对标创意工坊上的求解器和创意工坊上的观者。
-订阅即可，随求解器的工坊版本更新。
-[*][b]GitHub 版[/b] —— 对标我们自己的开发版求解器。每个 release 里放两样东西：本 Mod 的构建
-产物，和它对应的[b]那一个[/b]求解器版本的链接。
+[*][b]创意工坊版[/b]，也就是你现在看的这个 —— 对标求解器的[b]发布版[/b]（0.32.0 起）。
+订阅即可。绝大多数人用这个就行。
+[*][b]GitHub 版[/b] —— 对标某一个确定的求解器版本，可能是还没发布的开发版。每个 release 会
+写明它对标哪一个求解器版本并给出链接。
 [/list]
 
-两者要配套用。拿工坊版求解器配 GitHub 版适配层，或者反过来，都可能对不上。出了问题优先看
-你装的是哪一对。
+两条线不要混着装。混了也不会静默出错——结构自检对不上就拒绝加载——但没必要。
 
 本 Mod 的 GitHub：https://github.com/bingyang1132/AutoWatcher
 求解器的创意工坊：https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961
@@ -110,13 +115,20 @@ arithmetic right.
 [h2]Requirements[/h2]
 
 [list]
-[*]Combat Solver
-[*]Watcher (by Boninall)
+[*]Combat Solver, [b]0.32.0 or newer[/b]
+[*]Watcher (by Boninall), 0.9.25 or newer
 [*]RitsuLib
 [/list]
 
 All three are required. If any one is missing, AutoWatcher refuses to load rather than
 registering half of itself.
+
+The solver has to be 0.32.0 or newer because the adapter registers the Watcher's effects into the
+solver's internal registries, and those registration points were added version by version.
+0.32.0 is the first released build that ships all of them.
+
+A version mismatch never fails silently: if the solver is too old or missing a registration
+point, AutoWatcher refuses to load cleanly, logs exactly what is missing, and registers nothing.
 
 [h2]The solver is under active development, and this mod follows it[/h2]
 
@@ -124,14 +136,14 @@ The adapter is written against the solver's internal interfaces, so every time t
 changes, the adapter has to be brought back in line. Hence two channels:
 
 [list]
-[*][b]Steam Workshop[/b] — this page. Targets the Workshop build of the solver and the Workshop
-build of the Watcher. Subscribe; it tracks the solver's Workshop releases.
-[*][b]GitHub[/b] — targets our own development build of the solver. Every release ships two
-things: the AutoWatcher build, and a link to the [b]one[/b] solver version it was built against.
+[*][b]Steam Workshop[/b] — this page. Targets [b]released[/b] solver builds (0.32.0 and up).
+Just subscribe. This is the one most people want.
+[*][b]GitHub[/b] — targets one specific solver version, possibly a development build. Every
+release states which solver version it was built against and links to it.
 [/list]
 
-Use them as a pair. Mixing a Workshop solver with a GitHub adapter build (or the reverse) can
-silently mismatch. When something breaks, check which pair you have installed first.
+Do not mix the two. Mixing will not fail silently — the structural check refuses to load when it
+does not line up — but there is no reason to.
 
 This mod on GitHub: https://github.com/bingyang1132/AutoWatcher
 The solver on the Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961

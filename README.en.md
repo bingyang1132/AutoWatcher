@@ -15,29 +15,48 @@ arithmetic right.
 
 ## Requirements
 
-| Dependency | Where |
-|---|---|
-| Combat Solver | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) / [GitHub](https://github.com/Torch1230/CombatSolver) |
-| Watcher (by Boninall) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
-| RitsuLib | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
+| Dependency | Version | Where |
+|---|---|---|
+| Combat Solver | **0.32.0 or newer** | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) / [GitHub](https://github.com/Torch1230/CombatSolver) |
+| Watcher (by Boninall) | 0.9.25 or newer | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
+| RitsuLib | — | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
 
 All three are required. If any one is missing, AutoWatcher refuses to load rather than
 registering half of itself.
 
+**Why the solver has to be 0.32.0 or newer.** The adapter registers the Watcher's effects into
+the solver's internal registries, and those registration points were added version by version.
+0.32.0 is the first *released* build that ships all five of them (third-party strategic
+evaluation, potion choices, card choices, pile discard choices, playability coverage).
+
+**What happens on a version mismatch.** Nothing silent:
+
+- Solver older than 0.32.0, or missing a registration point → AutoWatcher **refuses to load
+  cleanly**, logs exactly what is missing and where to get a newer build, and registers nothing.
+  The solver then stops at its own third-party check, as it would without this mod.
+- The Watcher updates → as long as its internals are unchanged, AutoWatcher keeps working; if
+  they changed, it refuses to load the same way. One caveat: the Watcher can change numbers or
+  effects without changing any signature, and the structural check cannot catch that. The log
+  will say this build of the Watcher is not the one the adapter was verified against. If you see
+  that line and a route looks wrong, please file a bug.
+
 ## Two release channels
 
 **The solver is under active development, and this mod follows it.** The adapter is written
-against the solver's internal interfaces, so every time the solver changes, the adapter has to
-be brought back in line. Hence two channels:
+against the solver's internal interfaces, so when the solver changes the adapter may have to be
+brought back in line. Hence two channels:
 
 | Channel | Targets | Where |
 |---|---|---|
-| **Steam Workshop** | the Workshop build of the solver + the Workshop build of the Watcher | subscribe; tracks the solver's Workshop releases |
-| **GitHub** | our own development build of the solver | [Releases](https://github.com/bingyang1132/AutoWatcher/releases) |
+| **Steam Workshop** | *released* solver builds (0.32.0 and up) | just subscribe |
+| **GitHub** | one specific solver version, possibly a development build | [Releases](https://github.com/bingyang1132/AutoWatcher/releases) |
 
-Every GitHub release ships two things: the AutoWatcher build, and a link to the **one** solver
-version it was built against. Use them as a pair. Mixing a Workshop solver with a GitHub adapter
-build (or the reverse) can silently mismatch.
+Most people want the Workshop one. Every GitHub release states **which** solver version it was
+built against and links to it; that channel exists to track solver changes that are not released
+yet.
+
+Do not mix the two. Mixing will not fail silently — the structural check refuses to load when it
+does not line up — but there is no reason to.
 
 When something breaks, check which pair you have installed first.
 

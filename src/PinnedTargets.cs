@@ -49,11 +49,13 @@ internal static class PinnedTargets
     /// 求解器的最低版本。适配层要接进它的内部注册表，这些注册表是逐版加进去的。
     /// </summary>
     /// <remarks>
-    /// <c>0.31.3</c> 是上游合并了第三方战略估值、药水选择、卡牌选择、牌堆弃牌、可打出性覆盖
-    /// 五条扩展点之后的版本。注意：**已发布的 0.31.3 二进制不含卡牌选择那一条**，那条是随
-    /// 后合进主线的，所以光看版本号不够，还要靠结构自检。
+    /// <c>0.32.0</c> 是第一个**发布产物里就带全**适配层需要的五条扩展点的版本：第三方战略估值、
+    /// 药水选择、卡牌选择、牌堆弃牌、可打出性覆盖。前一个版本 <c>0.31.3</c> 的源码里有前四条，
+    /// 但发布的二进制不含卡牌选择那一条（它是随后合进主线的），所以不能拿它当下限。
+    ///
+    /// 光看版本号仍然不够——这就是结构自检存在的理由。
     /// </remarks>
-    public static readonly Version CombatSolverMinimumVersion = new(0, 31, 3);
+    public static readonly Version CombatSolverMinimumVersion = new(0, 32, 0);
 
     /// <summary>已经逐个动词核对过的那一份观者：v0.9.25，Workshop 3747526116，2026-09-04。</summary>
     public const string VerifiedWatcherDllSha256 =
