@@ -163,10 +163,10 @@ internal static partial class WatcherCardMirrors
             V.ForceEndTurn(context);
     }
 
-    /// <summary>X 费：生成一张涤罪者，其打击次数等于实付能量。</summary>
+    /// <summary>X 费：生成一张灭除之刃，其打击次数等于实付能量。</summary>
     /// <remarks>
     /// 生成的牌本身能镜像，但没法在生成时把 Repeat 设成 X 值——求解器的生成接口按牌类型创建
-    /// 规范实例，不接受实例级的负载。所以这里记一条风险：那张涤罪者会按默认的 1 次算。
+    /// 规范实例，不接受实例级的负载。所以这里记一条风险：那张灭除之刃会按默认的 1 次算。
     /// </remarks>
     private static void ConjureBlade(WatcherConjureBlade card, CardOnPlayMirrorContext context)
     {
@@ -175,7 +175,7 @@ internal static partial class WatcherCardMirrors
             return;
         V.AddCards<WatcherExpunger>(context, PileType.Draw, 1, CardPilePosition.Random);
         if (amount != 1)
-            V.Unmirrored(context, $"{card.Id.Entry} 生成的涤罪者打击次数应为 {amount}，镜像按默认 1 次算");
+            V.Unmirrored(context, $"{card.Id.Entry} 生成的灭除之刃打击次数应为 {amount}，镜像按默认 1 次算");
     }
 
     private static void Consecrate(WatcherConsecrate card, CardOnPlayMirrorContext context)
@@ -219,7 +219,7 @@ internal static partial class WatcherCardMirrors
             V.Power(context, typeof(DevaPower), 1);
             return;
         }
-        V.Unmirrored(context, $"{card.Id.Entry} 的第二张之后会追加一个独立的神性形态实例");
+        V.Unmirrored(context, $"{card.Id.Entry} 的第二张之后会追加一个独立的天人形态实例");
     }
 
     private static void Devotion(WatcherDevotion card, CardOnPlayMirrorContext context)

@@ -135,7 +135,7 @@ internal static class WatcherStanceVerbs
 
     /// <summary>对应 <c>WatcherCombatHelper.OnStanceChanged</c> 的六路扇出。</summary>
     /// <remarks>
-    /// 紫莲花和金瞳这类遗物在原版里是按遗物 ID 字符串轮询的，不是钩子，所以必须在这里读，
+    /// 紫色莲花和金瞳这类遗物在原版里是按遗物 ID 字符串轮询的，不是钩子，所以必须在这里读，
     /// 否则光靠钩子镜像会漏掉。退出预知的悟命那一路仍记风险，它依赖天命消耗标记。
     /// </remarks>
     private static void AfterStanceChanged(WatcherSim sim, Type? oldStance, Type? newStance)
@@ -155,7 +155,7 @@ internal static class WatcherStanceVerbs
             sim.Simulator.GainEnergy(sim.Owner, 1m);
         }
 
-        // 任何姿态变化都让弃牌堆里的疾风连打回手，包括退出姿态。
+        // 任何姿态变化都让弃牌堆里的疾风连击回手，包括退出姿态。
         PredictedCard[] flurries = sim.OwnerState.DiscardPile.Cards
             .Where(card => card.Preview is WatcherFlurryOfBlows)
             .ToArray();

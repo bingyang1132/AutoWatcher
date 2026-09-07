@@ -158,7 +158,7 @@ $cases = @(
     @{
         Id = "WATCHER-SCRY-DISCARD-BRANCH"
         Tags = @("cards", "draw")
-        Why = "天眼的预视要开出真正的搜索分支：牌堆顶三张里挑哪几张丢，由求解器自己搜，不再记成未建模选择。"
+        Why = "天眼的预见要开出真正的搜索分支：牌堆顶三张里挑哪几张丢，由求解器自己搜，不再记成未建模选择。"
         Args = @(
             "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
             "-CardsJson", '[{"cardId":"WATCHER_THIRD_EYE","pile":"Hand","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Draw","count":4}]',

@@ -25,7 +25,7 @@ namespace AutoWatcher;
 /// 战斗开始前触发（清水、泪滴挂坠）——求解器的根快照是在战斗开始之后取的，那张奇迹已经在
 /// 手上、平静已经进了，所以**不需要镜像**，补了反而会重复计算。
 ///
-/// 按遗物 ID 轮询而不是钩子（金瞳、紫莲花）——它们自己什么都不重写，效果写在观者的辅助函数
+/// 按遗物 ID 轮询而不是钩子（金瞳、紫色莲花）——它们自己什么都不重写，效果写在观者的辅助函数
 /// 里。所以只能在对应动词里读，已分别在 <see cref="WatcherSimVerbs.EffectiveScryAmount" /> 和
 /// 姿态切换的连带效果里实现。光靠钩子镜像会漏掉这两个。
 ///
@@ -64,10 +64,10 @@ internal static class WatcherItemMirrors
         SV.Power(sim, typeof(YangDexterityPower), 1);
     }
 
-    /// <summary>香料：自己洗牌后预视 3 张。</summary>
+    /// <summary>香料：自己洗牌后预见 3 张。</summary>
     /// <remarks>
-    /// 实际张数还要过金瞳和守视的加减。预视本身可能因为抽牌堆为空而再触发一次洗牌，原版是
-    /// 有可能递归的；这里的预视动词不重洗牌堆，所以不会递归。
+    /// 实际张数还要过金瞳和守视的加减。预见本身可能因为抽牌堆为空而再触发一次洗牌，原版是
+    /// 有可能递归的；这里的预见动词不重洗牌堆，所以不会递归。
     /// </remarks>
     private static void MelangeAfterShuffle(Melange relic, AfterShuffleMirrorContext context)
     {

@@ -4,10 +4,9 @@
 
 Makes the **Slay the Spire 2 combat route solver** work with the **Watcher**.
 
-**This mod changes no game behaviour.** It only fills in the simulation mirrors the solver is
-missing; the manifest sets `affects_gameplay` to `false`. Cards, damage, every number is exactly
-what it would be without this mod. The only difference is that with it installed, the solver can
-automate playing the Watcher.
+The solver is not compatible with the Watcher on its own. With this mod installed, the solver can
+automate playing the Watcher. It changes no game behaviour and no numbers (the manifest sets
+`affects_gameplay` to `false`).
 
 ## Requirements
 
@@ -36,6 +35,8 @@ brought back in line. Hence two channels:
 | **Steam Workshop** | *released* solver builds (0.32.0 and up) | [subscribe](https://steamcommunity.com/sharedfiles/filedetails/?id=3797303841) |
 | **GitHub** | one specific solver version, possibly a development build | [Releases](https://github.com/bingyang1132/AutoWatcher/releases) |
 
+Torch's Slay the Spire 2 modding group (Chinese-language, QQ): 1106541324
+
 When something breaks, check which pair you have installed first.
 
 ## What is covered
@@ -54,10 +55,13 @@ When something breaks, check which pair you have installed first.
 
 ## Known gaps
 
-Five effects are explicitly recorded as unmirrored. They **never silently miscalculate** — the
-solver marks the route in red with "unmirrored effect here", so you can see it. A further set of
-hooks that run through Harmony postfixes, or that the solver does not dispatch, is also not
-covered. Both lists are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+Five cards have effects explicitly recorded as unmirrored, among them **Pressure Points**,
+**Deva Form** and **Conjure Blade**. They **never silently miscalculate** — the solver marks the
+route in red with "unmirrored effect here". A further set of hooks that run through Harmony
+postfixes, or that the solver does not dispatch, is also not covered. These will be filled in over
+the coming releases.
+
+Both full lists are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 ## FAQ
 

@@ -63,8 +63,8 @@ internal static class WatcherTurnEndPatch
     /// </remarks>
     private static void RunFor(WatcherSim sim)
     {
-        // 神圣在回合结束时退出。走姿态动词，这样退出的连带效果（疾风连打回手、心之堡垒格挡、
-        // 紫莲花能量）也一并正确。
+        // 神圣在回合结束时退出。走姿态动词，这样退出的连带效果（疾风连击回手、心灵堡垒格挡、
+        // 紫色莲花能量）也一并正确。
         if (sim.Combat.GetAmount<Divinity>(sim.Self) > 0)
             WatcherStanceVerbs.ExitStance(sim);
 

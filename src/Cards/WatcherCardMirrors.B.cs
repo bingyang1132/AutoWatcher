@@ -163,7 +163,7 @@ internal static partial class WatcherCardMirrors
             V.KillTarget(context);
     }
 
-    /// <summary>顺序要紧：预视完整结算完，才轮到格挡和伤害。</summary>
+    /// <summary>顺序要紧：预见完整结算完，才轮到格挡和伤害。</summary>
     private static void JustLucky(WatcherJustLucky card, CardOnPlayMirrorContext context)
     {
         V.Scry(context, VarInt(card, "MagicNumber"));

@@ -50,19 +50,19 @@ Harmony postfix 的 `XxxCompat` 方法或求解器根本不分发的钩子，各
 | 缺口 | 内容 | 影响 |
 |---|---|---|
 | `AfterSideTurnStartCompat` | 深思沉眠的下回合结算、预测移动改写敌人意图 | 两个 Power 完全不生效 |
-| `BeforeHandDrawCompat` | 观者状态的延迟保留、预知的回合初预视 | 保留和预视时机错 |
+| `BeforeHandDrawCompat` | 观者状态的延迟保留、预知的回合初预见 | 保留和预见时机错 |
 | `AfterCardRetained` / `AfterFlush` | 洗炼的格挡、时之沙的费用、风车打击的伤害逐次增长 | 这三张牌在路线内被保留时数值不涨，系统性低估 |
 | `OnScryDiscarded` | 圣歌与启示这两张不可打出牌的全部效果 | 完全不生效 |
 | ~~`AfterCardChangedPiles`~~ | ~~凌波微步的延迟抽牌~~ | **已补**：`WatcherRushdownPatch` 挂在 `CombatPredictionSimulator.OnPlayWrapper` 之后，那正好是牌离开出牌堆之后。陶瓷鱼的金币不属于战斗状态，不做 |
-| `AfterEnergyReset` | 神性形态的能量、能量下降 | 能量算错 |
+| `AfterEnergyReset` | 天人形态的能量、能量下降 | 能量算错 |
 | `AfterPlayerTurnStartEarly` | 观者状态的每回合计数器重置、神威天罚的每回合一次重置、悟命的真言发放 | 计数器不重置；神威天罚因此只能记风险不生效 |
 
 `AfterEnergyReset` 有现成接入点（`TurnStartRelicSupport.TriggerAfterEnergyReset`），是下一个
 最容易补的。`AfterPlayerTurnStartEarly` 没有独立接入点，但可以并到已有的回合开始补丁里，
 只要确认它的时机在求解器流程里对得上。
 
-**第 3 块：预视与选牌的搜索分支。** 7 张牌加姿态药水和天赋护符。这是搜索分支问题而不是镜像
-问题：预视要看牌堆顶 N 张并选一个子集丢掉，得在 beam 上再开一层组合分支。目前按"一张都不丢"
+**第 3 块：预见与选牌的搜索分支。** 7 张牌加姿态药水和天赋护符。这是搜索分支问题而不是镜像
+问题：预见要看牌堆顶 N 张并选一个子集丢掉，得在 beam 上再开一层组合分支。目前按"一张都不丢"
 建模并记选择风险——那是玩家一定做得出的选择，所以路线仍然可执行，只是没有探索丢牌的可能性。
 仓库里有类似机制可参考（`KnowledgeDemonChoiceSupport`、`TurnStartChoiceSupport`、
 `UnresolvedPlayerChoice`）。成本估不准。
