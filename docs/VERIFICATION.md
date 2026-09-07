@@ -104,7 +104,7 @@ dotnet build AutoWatcher.csproj -c Release
 
 | 内容 | 原因 |
 |---|---|
-| `WATCHER_OMNISCIENCE` / `WATCHER_FOREIGN_INFLUENCE` / `WATCHER_MEDITATE` / `WATCHER_WISH_P` 的选牌 | 挑哪一张是搜索分支问题，求解器的选择规格按原版卡牌类型写死，第三方登记不进去 |
+| `WATCHER_OMNISCIENCE` / `WATCHER_FOREIGN_INFLUENCE` / `WATCHER_MEDITATE` 的选牌 | 选项都是「从某个牌堆里挑一张牌」，候选口径还没定下来。登记入口已经有了（`CardChoiceMirrors`），只是还没做 |
 | `WATCHER_DRAW_TALISMAN` 的批量临时附魔 | 需要附魔系统的建模 |
 | `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 求解器的生成接口按牌类型创建规范实例，不接受实例级负载 |
 | `WATCHER_DEVA_FORM` 的第二个及之后的实例 | 那个 Power 自己维护一个实例表，N 张牌是 N 个独立成长的实例，不等于一个数量为 N 的实例 |
@@ -121,8 +121,45 @@ dotnet build AutoWatcher.csproj -c Release
 补镜像否则会重复；金瞳和紫莲花自己什么都不重写，是按遗物 ID 轮询的，已分别在预视张数和
 姿态连带效果里读到。达玛茹走回合开始，见下。
 
-**3 个药水**：神赐甘露进神圣、瓶装奇迹加两张奇迹，都已镜像；姿态药水整瓶记为未建模的选择，
-理由见下面「姿态药水这一条要值多少」。
+**3 个药水**：神赐甘露进神圣、瓶装奇迹加两张奇迹，都已镜像；姿态药水的二选一走
+`PotionChoiceMirrors`，见下面「姿态药水这一条要值多少」。
+
+### 许愿的三选一
+
+3 费，打出后在三个愿望里选一个。三张选项牌是真的牌，各自带 `MagicNumber`：
+
+| 选项牌 | 效果 | 基础 / 升级 |
+|---|---|---|
+| `WatcherWishAlmighty` | `StrengthPower` | 3 / 4 |
+| `WatcherWishLiveForever` | `WishPlatedArmorPower` | 6 / 8 |
+| `WatcherWishFameAndFortune` | 金币 | 25 / 30 |
+
+登记在 `src/WatcherCardChoices.cs`，走求解器的 `CardChoiceMirrors`（分支
+`pr/third-party-card-choice`）。三个愿望是三个真分支，挑哪个由搜索自己比。
+
+三点值得记下来：
+
+- **金币不需要新刻度。** 求解器的长期资源刻度本来就是金币刻度：`贪婪之手` 是
+  `RecordLongTermResource(面值)`，猎杀记 30，生成一瓶药水记 20。所以金币这一支就是
+  `GainPlayerGold` 加 `RecordLongTermResource`，面值直记。
+- **金币换不到血,所以「后面有没有商店」不需要判断。** Beam 里
+  `LongTermResourceBeamValue = 25_000` 对 `Hp = 30_000`，够让攒钱路线活到最后不被剪掉；
+  而最终选择是字典序，长期资源排在 `StrategicHpDeficit`、`CombatEndedTurn`、
+  `PolicyHpDeficit`、`HealthResourceCost` 全部之后。也就是说只要另一个愿望能省下哪怕 1 点血，
+  它就直接赢。求解器只会在金币白拿的时候选金币 —— 那时候选它本来就是对的。
+- **三张选项牌要跟着本牌一起升级。** 原版对三张都调了 `UpgradeInternal`，spec 里必须照做：
+  部署时按 CardId 加升级等级在原生页面上定位，升级等级不对就找不到那个选项。
+  数值也从选项牌自己的 `MagicNumber` 上读，不写死 —— 那三个数在原版 `OnPlay` 和选项牌的
+  `CanonicalVars` 里各写了一遍。
+
+`WatcherWish_P` 的 OnPlay 镜像必须是**空的**：求解器出牌时会自己调
+`ResolveManualCardChoice` 查选择规格，不需要镜像主动请求，在镜像里再施加一次就是算两遍。
+和姿态药水的 `StancePotionOnUse` 同一个道理。
+
+这一版观者里 `TryConsumeKnowFateBoost` 是基类实现、恒为 `false` 且不消耗任何东西，
+所以 `boosted` 就是本牌的升级状态，没有「即使没选也已经消耗了天命」这回事。
+反编译里出现的 `WatcherWishV2` 只是 VFX 的类型名匹配，这一版没有这个类。
+以后观者加了会消耗天命的变体，那一层顺序依赖才需要建模。
 
 **14 个 Power 钩子镜像**：交叉核对了观者所有类型对求解器 51 个受镜像钩子的重写，逐条补上。
 另有 7 个 `Modify*` / `Should*` 重写不用补——求解器会回落到 mod 自己的实现，本来就正确，

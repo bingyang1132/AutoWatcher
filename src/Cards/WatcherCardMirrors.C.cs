@@ -190,13 +190,20 @@ internal static partial class WatcherCardMirrors
     private static void WindmillStrike(WatcherWindmillStrike card, CardOnPlayMirrorContext context)
         => V.Attack(context);
 
-    /// <summary>三选一。</summary>
+    /// <summary>
+    /// 三选一。整张牌的效果都在选择里，登记在 <see cref="WatcherCardChoices"/>，这里必须是空的。
+    /// </summary>
     /// <remarks>
-    /// 顺序上还有一层依赖：消耗天命的加成尝试在三个选项被创建、选择界面打开之前就 await 掉了，
-    /// 所以即使最后没有选到任何东西，天命也已经被消耗。整张牌都依赖玩家选择。
+    /// 求解器出牌时会自己调 <c>ResolveManualCardChoice</c> 去查选择规格，不需要 OnPlay 镜像
+    /// 主动请求。在这里再施加一次效果就会算两遍。
+    ///
+    /// 这一版观者里 <c>TryConsumeKnowFateBoost</c> 是基类实现、恒为 <c>false</c> 且不消耗任何
+    /// 东西，所以没有"即使没选也已经消耗了天命"这回事；以后观者加了会消耗天命的变体，
+    /// 那一层顺序依赖才需要建模。
     /// </remarks>
     private static void Wish(WatcherWish_P card, CardOnPlayMirrorContext context)
-        => V.PlayerChoice(context, $"{card.Id.Entry} 在力量、镀甲和金币三个愿望里选一个");
+    {
+    }
 
     private static void Worship(WatcherWorship card, CardOnPlayMirrorContext context)
         => V.GainMantra(context, VarInt(card, "MagicNumber"));

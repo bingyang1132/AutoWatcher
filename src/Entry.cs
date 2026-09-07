@@ -107,6 +107,9 @@ public static class Entry
         // 会改变"该按什么顺序出牌"的观者 Power。目前只有反弹格挡一个。
         WatcherStrategicEffects.RegisterAll();
 
+        // 打出后当场让玩家选一个的牌。目前只有许愿一张。
+        WatcherCardChoices.RegisterAll();
+
         RegisteredCardCount = 5
             + WatcherCardMirrors.RegisterA(onPlay)
             + WatcherCardMirrors.RegisterB(onPlay)
