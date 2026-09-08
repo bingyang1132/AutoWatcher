@@ -130,6 +130,11 @@ public static class Entry
         // 收益落在本场战斗之外的两处：勤学精进的永久升级，许愿三选一里的金币。
         WatcherGrowthSources.RegisterAll();
 
+        // 观者的起手打击、防御。不声明的话它们按通用估值算成有伤害/格挡的普通牌，
+        // 净化这类移除选择永远不会先烧它们——求解器于是不会替玩家压牌库。
+        SolverCompat.RegisterBasicCardRemoval?.Invoke(typeof(WatcherStrike_P), "Strike");
+        SolverCompat.RegisterBasicCardRemoval?.Invoke(typeof(WatcherDefend_P), "Defend");
+
         RegisteredCardCount = 5
             + WatcherCardMirrors.RegisterA(onPlay)
             + WatcherCardMirrors.RegisterB(onPlay)

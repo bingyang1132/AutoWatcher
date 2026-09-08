@@ -67,6 +67,13 @@ internal static class SolverCompat
     /// <summary>求解器有没有第三方局外成长来源的登记入口。</summary>
     public static bool HasGrowthSourceRegistry => GrowthSourceRegister is not null;
 
+    /// <summary>
+    /// 声明一张牌属于哪一类起手牌，进求解器的移除估值。参数是牌的类型和类别名
+    /// （<c>"Strike"</c> 或 <c>"Defend"</c>）。绑不上说明求解器还没有这个入口，那时候观者的
+    /// 打击、防御按通用估值算成有伤害/格挡的普通牌，净化不会优先烧它们。
+    /// </summary>
+    public static readonly Action<Type, string>? RegisterBasicCardRemoval = BindBasicCardRemoval();
+
     /// <summary>绑定的结果，写进加载日志，方便一眼看出装的是哪种求解器。</summary>
     public static string Summary =>
         (RecordFatalKillGoal is null
@@ -77,7 +84,10 @@ internal static class SolverCompat
             : "。Power 隐藏状态进指纹：已绑定")
         + (GrowthSourceRegister is null
             ? "。局外成长来源登记：求解器没有这个入口，勤学精进与许愿的金币只走长期资源刻度"
-            : "。局外成长来源登记：已绑定");
+            : "。局外成长来源登记：已绑定")
+        + (RegisterBasicCardRemoval is null
+            ? "。起手牌移除估值：求解器没有这个入口，净化不会优先烧打击防御"
+            : "。起手牌移除估值：已绑定");
 
     /// <summary>
     /// 登记一个第三方局外成长来源，返回"记一次收益到手"的委托。求解器没有这个入口时返回
@@ -141,6 +151,42 @@ internal static class SolverCompat
         catch (Exception ex)
         {
             EngineDiagnostics.Warn($"[AutoWatcher] 没能绑上 GrowthSourceMirrors.Register：{ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 绑 <c>CardRemovalValueMirrors.Register&lt;TCard&gt;(BasicCardRemovalKind)</c>。
+    /// </summary>
+    /// <remarks>
+    /// 方法是泛型的、参数是编译时不可见的枚举，所以两样都反射取：类型参数每次现拼，枚举值按
+    /// 名字解析成常量。登记只在加载时发生两次，反射的代价无所谓。
+    /// </remarks>
+    private static Action<Type, string>? BindBasicCardRemoval()
+    {
+        try
+        {
+            Assembly solver = typeof(SimulatedCombatState).Assembly;
+            MethodInfo? generic = solver
+                .GetType("CombatSolver.CardRemovalValueMirrors", throwOnError: false)
+                ?.GetMethod("Register", BindingFlags.Public | BindingFlags.Static);
+            Type? kindType = solver.GetType("CombatSolver.BasicCardRemovalKind", throwOnError: false);
+            if (generic is null || !generic.IsGenericMethodDefinition || kindType is null || !kindType.IsEnum)
+                return null;
+            return (cardType, kindName) =>
+            {
+                if (!Enum.GetNames(kindType).Contains(kindName))
+                {
+                    EngineDiagnostics.Warn(
+                        $"[AutoWatcher] 求解器的起手牌类别里没有 {kindName}，{cardType.Name} 没登记。");
+                    return;
+                }
+                generic.MakeGenericMethod(cardType).Invoke(null, [Enum.Parse(kindType, kindName)]);
+            };
+        }
+        catch (Exception ex)
+        {
+            EngineDiagnostics.Warn($"[AutoWatcher] 没能绑上 CardRemovalValueMirrors.Register：{ex.Message}");
             return null;
         }
     }
