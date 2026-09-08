@@ -54,6 +54,13 @@ public static class Entry
         _logger.Info($"已注册 {RegisteredCardCount} 张观者卡牌的镜像与全套效果动词。{check.Detail}");
     }
 
+    /// <summary>
+    /// 观者起手打击与防御的移除估值偏置。取到负值是必须的，不是调参：消耗分支的排序键是
+    /// 负的估值和，估值全为正时「一张都不选」恒排第一。−10 把打击压到 −4、防御压到 −6，
+    /// 两张都稳稳低于零，同时保住升级梯度（打击+ 9 伤害是 −1，仍然比未升级的更靠后烧）。
+    /// </summary>
+    private const double StarterRemovalOffset = -10d;
+
     private static void RegisterAll()
     {
         // 求解器默认拒绝任何第三方 gameplay mod 的 ModHelper 订阅者。观者只注册了这一个，
@@ -130,10 +137,18 @@ public static class Entry
         // 收益落在本场战斗之外的两处：勤学精进的永久升级，许愿三选一里的金币。
         WatcherGrowthSources.RegisterAll();
 
-        // 观者的起手打击、防御。不声明的话它们按通用估值算成有伤害/格挡的普通牌，
-        // 净化这类移除选择永远不会先烧它们——求解器于是不会替玩家压牌库。
-        SolverCompat.RegisterBasicCardRemoval?.Invoke(typeof(WatcherStrike_P), "Strike");
-        SolverCompat.RegisterBasicCardRemoval?.Invoke(typeof(WatcherDefend_P), "Defend");
+        // 观者的起手打击、防御：给一个负偏置，让净化这类移除选择真的愿意烧它们。
+        //
+        // 不给的话它们按通用估值算成有伤害/格挡的普通牌（打击 6.0、防御 4.0），而观者真正的
+        // 引擎牌——全知、内心宁静、许愿——牌面上没有 Damage/Block/Cards，通用估值一律给 0.0，
+        // 于是先被烧掉的永远是引擎。更要紧的是消耗那条分支的排序键是负的估值和，估值全为正时
+        // 「一张都不选」恒排第一，所以必须压到零以下，「烧它」才排得到「不烧」前面。
+        //
+        // 两张同一个偏置就够，不需要分别调：通用估值把格挡打了八折，所以防御（4.0 - 10）自然
+        // 排在打击（6.0 - 10）前面被烧。观者靠姿态、心灵堡垒和警惕起甲，一张普通防御确实比一张
+        // 打击更该烧——和原版五个角色相反，那也是不走「起手打击/防御」类别抽象的原因。
+        SolverCompat.RegisterCardRemovalOffset?.Invoke(typeof(WatcherStrike_P), StarterRemovalOffset);
+        SolverCompat.RegisterCardRemovalOffset?.Invoke(typeof(WatcherDefend_P), StarterRemovalOffset);
 
         RegisteredCardCount = 5
             + WatcherCardMirrors.RegisterA(onPlay)
