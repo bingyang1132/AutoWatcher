@@ -24,6 +24,22 @@ internal static class WatcherSimVerbs
     public static void Power(WatcherSim sim, Type powerType, int amount)
         => sim.Effects.ApplyPower(powerType, sim.Self, amount, sim.Self);
 
+    /// <summary>施加一个 <c>TemporaryDexterityPower</c> 子类。不能改用 <see cref="Power" />。</summary>
+    /// <remarks>
+    /// <para>
+    /// 原版基类在 <c>BeforeApplied</c> 里会自动配一份等量的 <c>DexterityPower</c>，回合结束时
+    /// <c>RestoreTemporaryDexterity</c> 把所有 <c>TemporaryDexterityPower</c> 子类的层数求和，
+    /// 一次性从 <c>DexterityPower</c> 里减掉。求解器完整复刻了这套。
+    /// </para>
+    /// <para>
+    /// 关键在于施加侧和回收侧不对称：<c>ApplyPower</c> 不认这个基类，只加记账层；回收侧认，
+    /// 照样按记账层扣真敏捷。用 <see cref="Power" /> 施加的话，加的时候少一份增益，回合结束
+    /// 却照扣，于是下一回合开局凭空多出一个负敏捷——不是少算，是算反了。
+    /// </para>
+    /// </remarks>
+    public static void TemporaryDexterity(WatcherSim sim, Type powerType, int amount)
+        => sim.Effects.ApplyTemporaryDexterity(powerType, sim.Self, amount, sim.Self);
+
     /// <summary>把 Power 设成确切数量而不是叠加。对应 WatcherPowerCmdCompat.SetAmount。</summary>
     public static void SetPower(WatcherSim sim, Type powerType, int amount)
     {

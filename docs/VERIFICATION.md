@@ -604,6 +604,63 @@ public static bool RequiresChoice(PotionModel potion)
   `PotionOnUseMirrors` 就够了、也确实是对的，卡住的只有带选择的这一个。规则是通用的——
   任何 mod 的药水，不带选择的能用镜像补上，带选择的都会撞上这道封闭开关。
 
+### 阳的临时敏捷只加了一半（2026-09-09 修）
+
+永世沙漏战，全自动，第 2 回合开局报状态不一致，两条差异：
+
+```
+field=block expected={7} actual={16}
+field=P[2] expected={0:DEXTERITY_POWER=-5/0[]}
+        actual={1:WITHERING_PRESENCE_POWER=6/0[CardsLeft=3,]} expected_count=4 actual_count=3
+```
+
+`P[2]` 那条容易读错。`ContinuationStamp.AppendPowers` 把**全场所有生物**的能力串成一个扁平
+列表，`P[n]` 是列表下标，前缀是拥有者的 `CombatId`。预期列表多出一项，从下标 2 起整体错位，
+所以「实际值」那半边报的是敌人的凋零气场——**它是被撞上去的，不是不匹配项**。凋零气场本身
+一点没算错（15 张牌 ÷ 基数 6 = 触发 2 次余 3，`CardsLeft=3` 分毫不差）。读这类 diff 一定要
+先看 `expected_count` 和 `actual_count` 相不相等。
+
+真正的差异只有一条：模拟里玩家凭空多了 `DEXTERITY_POWER = -5`。
+
+根因是 `YangDexterityPower` 继承自原版 `TemporaryDexterityPower`。这个基类在 `BeforeApplied`
+里会自动配一份等量的 `DexterityPower`，回合结束由 `RestoreTemporaryDexterity()` 把所有子类的
+层数求和、一次性从 `DexterityPower` 里减掉。求解器完整复刻了这套。
+
+而适配层的阳用的是普通 `ApplyPower`，只加了记账层：
+
+```csharp
+SV.Power(sim, typeof(YangDexterityPower), 1);   // 错
+```
+
+施加侧和回收侧不对称：`ApplyPower` 不认这个基类，回收侧认。于是加的时候少一份增益、回合
+结束照扣，下一回合开局多出一个负数。**不是少算，是算反。**第 1 回合打了 5 张攻击牌，就是
+那个 -5。
+
+格挡那 9 点是同一根因的另一半。按录制的实际出牌顺序，警惕+ 打出时累计 4 点阳敏捷、停顿
+打出时 5 点，4 + 5 = 9，7 + 9 = 16。
+
+改成配套路径：
+
+```csharp
+SV.TemporaryDexterity(sim, typeof(YangDexterityPower), 1);   // 对
+```
+
+`ICombatPredictionEffectSink.ApplyTemporaryDexterity(Type, …)` 是求解器现成的入口，原版螺旋
+飞镖走的就是它（`AfterCardPlayedMirrors.cs` 里的 `HelicalDartPower`）。
+
+**这一次的 diff_count 是 2**，也就是说除了敏捷和它派生的格挡，15 张牌的出牌流、洗牌、凋零
+气场生成的两张凋零的落点、沙漏的行动、九路 RNG 全部逐字节一致。
+
+反编译核过：`YangDexterityPower` 是观者里**唯一**继承临时增益基类的类型，只有这一处要改。
+另外在 `AdapterSelfCheck` 里加了加载期扫描——观者以后新增临时敏捷/力量/集中类能力而适配层
+没跟上时，加载日志会点名，不再静默算反。
+
+- 回归锁：**还没有夹具。**矩阵里没有一条会发遗物（`-RelicsJson` 从没用过），要新写一条
+  「阳 + 攻击牌 + 同回合起甲」的最小场景，判据落在 `max_block`。等下次跑整条矩阵时一起加。
+- 上游可以加固的一点：`SimulatedCombatState.ApplyPower(Type, …)` 完全不认 `ITemporaryPower`，
+  而回收侧认。它可以识别并转发到配套路径，让任何第三方 mod 免于踩同一个坑。核过上游自己
+  传给 `ApplyPower` 的类型没有一个是 `ITemporaryPower`，这个改动对现有调用零影响。
+
 ## 强度验收标准
 
 **不要用胜率或手感做验收。** 姿态被冻结时求解器会低估自己在愤怒姿态下的伤害，于是打得保守，

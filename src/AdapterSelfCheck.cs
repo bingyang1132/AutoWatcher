@@ -57,6 +57,17 @@ internal static class AdapterSelfCheck
         ("WatcherMod.DevaPower", "Instances"),
     ];
 
+    /// <summary>观者里继承自临时增益基类、适配层已经按配套路径施加的能力。</summary>
+    /// <remarks>
+    /// 这类能力施加侧和回收侧不对称：<c>ApplyPower</c> 只加记账层，回合结束却照样按记账层扣
+    /// 真增益。必须走 <c>WatcherSimVerbs.TemporaryDexterity</c> 这样的配套动词，否则不是少算，
+    /// 是算反。观者哪天新增一个，下面这份名单和对应的动词都要跟上，所以加载期扫一遍。
+    /// </remarks>
+    private static readonly string[] HandledTemporaryPowers =
+    [
+        "WatcherMod.YangDexterityPower",
+    ];
+
     public static Result Run()
     {
         Assembly watcher = typeof(Wrath).Assembly;
@@ -102,8 +113,44 @@ internal static class AdapterSelfCheck
                 .Append("）。结构没变所以照常注册，但如果观者在这一版改了数值或效果，"
                     + "适配层会算错且不会自己发现。发现路线不对请报 Bug。");
         }
+        if (FindUnhandledTemporaryPowers(watcher) is { } unhandledTemporary)
+        {
+            detail.Append(" 注意：观者里有适配层还没按配套路径处理的临时增益能力：")
+                .Append(unhandledTemporary)
+                .Append("。这类能力施加时必须同时加一份等量的常驻增益，只加记账层的话回合"
+                    + "结束照样扣，下一回合开局会多出一个负数。照常注册，但这几个会算错。");
+        }
         detail.Append(' ').Append(SolverCompat.Summary).Append('。');
         return new Result(true, detail.ToString());
+    }
+
+    /// <summary>返回观者里没走配套路径的临时增益能力，全都处理过就返回 <c>null</c>。</summary>
+    /// <remarks>
+    /// 按基类名前后缀认，不写死 <c>TemporaryDexterityPower</c> 一个，这样观者以后加临时力量、
+    /// 临时集中也一样能抓到。
+    /// </remarks>
+    private static string? FindUnhandledTemporaryPowers(Assembly watcher)
+    {
+        Type[] types;
+        try { types = watcher.GetTypes(); }
+        catch (ReflectionTypeLoadException error) { types = [.. error.Types.OfType<Type>()]; }
+
+        List<string> unhandled = [];
+        foreach (Type type in types)
+        {
+            for (Type? baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
+            {
+                if (!baseType.Name.StartsWith("Temporary", StringComparison.Ordinal)
+                    || !baseType.Name.EndsWith("Power", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                if (!HandledTemporaryPowers.Contains(type.FullName))
+                    unhandled.Add($"{type.FullName}（{baseType.Name}）");
+                break;
+            }
+        }
+        return unhandled.Count == 0 ? null : string.Join('、', unhandled);
     }
 
     private static string? CheckVersion(Assembly assembly, Version minimum, string what)

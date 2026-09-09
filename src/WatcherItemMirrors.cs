@@ -61,7 +61,7 @@ internal static class WatcherItemMirrors
             return;
         WatcherSim sim = WatcherSim.From(
             context.CombatState, context.Simulator, context.State, context.History, owner);
-        SV.Power(sim, typeof(YangDexterityPower), 1);
+        SV.TemporaryDexterity(sim, typeof(YangDexterityPower), 1);
     }
 
     /// <summary>香料：自己洗牌后预见 3 张。</summary>
