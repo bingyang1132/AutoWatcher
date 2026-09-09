@@ -297,17 +297,23 @@ $cases = @(
     },
     @{
         # 第二条纯算术判别，针对奇迹的能量：
-        #   起手 3 能量。奇迹 0 费给 1 点 -> 4 点，两张爆发各 2 费刚好打完，共 3 个动作。
-        #   奇迹的能量没建模的话只有 3 点，第二张爆发付不起，只有 2 个动作。
+        #   起手 3 能量。爆发 2 费打 9 点后进愤怒；奇迹 0 费补 1 点能量，凑够第二张爆发，
+        #   第二张吃愤怒翻倍打 18 点。9 + 18 = 27，正好斩杀。
+        #   奇迹的能量没建模的话，打完第一张爆发只剩 1 点，第二张付不起，只有 9 点。
         #   这里用两张爆发而不是爆发加警戒，是为了不让"退出平静补能量"顶替奇迹的能量，
         #   否则这条就测不出奇迹。
+        #
+        # 判据原本是"首轮至少 3 个可执行动作"，2026-09-09 跑 0.34.7 时挂了。查下来镜像没坏
+        # （StarterDeckMirrors.Miracle 照常 GainEnergy），是求解器的取舍变了：敌人 80 血那版
+        # 本来就杀不掉，它宁可留着奇迹这张 0 费保留牌、主动卖 4 血分三回合打完，首轮只出一张
+        # 爆发。"动作数"这种判据吃路线偏好，换成和兄弟夹具一样的"正好斩杀"就不吃了。
         Id = "WATCHER-MIRACLE-ENERGY"
         Tags = @("energy")
-        Why = "奇迹给 1 点能量。没有它第二张爆发付不起，动作数只有 2。"
+        Why = "奇迹给 1 点能量。没有它第二张爆发付不起，27 血杀不掉。"
         Args = @(
-            "-EnemyCurrentHp", "80", "-ClearPlayerPiles",
+            "-EnemyCurrentHp", "27", "-ClearPlayerPiles",
             "-CardsJson", (Hand @("WATCHER_MIRACLE", "WATCHER_ERUPTION_P", "WATCHER_ERUPTION_P")),
-            "-ExpectedInitialExecutableActionCountAtLeast", "3",
+            "-ExpectedInitialCombatEndedTurn", "1",
             "-ExpectedInitialUnmirroredCount", "0"
         )
     },
@@ -578,6 +584,30 @@ $cases = @(
             "-CardsJson", '[{"cardId":"WATCHER_DEVA_FORM","pile":"Hand","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Draw","count":4}]',
             "-ExpectedInitialFirstActionCardId", "WATCHER_DEVA_FORM",
             "-ExpectedInitialCombatEndedTurn", "2",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 阳每打出一张攻击牌给 1 点临时敏捷。YangDexterityPower 继承原版
+        # TemporaryDexterityPower，那个基类在 BeforeApplied 里会自动配一份等量的
+        # DexterityPower，回合结束由 RestoreTemporaryDexterity 一起收回。所以必须走
+        # ApplyTemporaryDexterity，用普通 ApplyPower 只加记账层：本回合起甲少算，
+        # 回合结束还照扣，下一回合开局凭空多出一个负敏捷。
+        #
+        # 判据是算术的：停顿基础 3 甲（实机核过，带 1 点敏捷时起 4 甲），两张打击各给
+        # 1 点敏捷，都排在停顿前面 = 3 + 2 = 5 甲。三张牌各 1 费，正好 3 费。中立姿态，
+        # 停顿的愤怒加成不参与。
+        #
+        # 反向对照：把 SV.TemporaryDexterity 改回 SV.Power 重新构建，停顿只有 3 甲，
+        # 这条挂在"最高可起防 3、预期至少 5"。
+        Id = "WATCHER-YANG-TEMPORARY-DEXTERITY"
+        Tags = @("hooks", "damage")
+        Why = "阳的临时敏捷要同时加一份常驻敏捷，本回合的起甲才吃得到。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-RelicsJson", '[{"relicId":"YANG"}]',
+            "-CardsJson", (Hand @("WATCHER_STRIKE_P", "WATCHER_STRIKE_P", "WATCHER_HALT")),
+            "-ExpectedInitialMaxBlockAtLeast", "5",
             "-ExpectedInitialUnmirroredCount", "0"
         )
     }
