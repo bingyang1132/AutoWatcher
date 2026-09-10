@@ -156,7 +156,11 @@
       `AutoWatcher.dll`（1.0.2.0）和新的 `AutoWatcher.json`、`workshop.json`、`image.png`。
 - [x] **全量 32/32 通过**（2026-09-10 00:20–00:41，求解器 `0.34.8` + 观者 `0.9.28`）。
       0 失败、0 未运行，21 分钟跑完，单条约 39 秒（0.34.7 那会儿是 ~52 秒）。
-- [ ] 上传创意工坊 `3797303841`。
-- [ ] GitHub release `v1.0.2`，附 `AutoWatcher-1.0.2.zip` 和
+- [x] 上传创意工坊 `3797303841`（2026-09-10）。中英两份标题描述都传了，三个依赖沿用原有的
+      没有改动。上传日志里 `k_EItemUpdateStatusInvalid` 是正常的完成态，不是错误。
+- [x] GitHub release [`v1.0.2`](https://github.com/bingyang1132/AutoWatcher/releases/tag/v1.0.2)，
+      附 `AutoWatcher-1.0.2.zip`，说明用的是
       [publish/RELEASE_NOTES_1.0.2.md](RELEASE_NOTES_1.0.2.md)。
-- [ ] 这一版仍然没有原版角色的回归证据，release 说明里如实写了。
+- [x] 这一版仍然没有原版角色的回归证据，release 说明里如实写了。
+- [x] release 说明里单列了一条提醒：成长额度填了非零值之后，求解器会关掉「打到可接受战损
+      就提早收手」，每场都会跑满深化预算。根因在求解器侧，但额度是本 Mod 加进去的。
