@@ -154,8 +154,8 @@
 - [x] `publish/workshop.json` 重新生成，`changeNote` 写的是 1.0.2 的实际改动。
 - [x] 上传工作区 `ModUploader-win-x64/AutoWatcherWorkshop/` 已换成 Release 构建的
       `AutoWatcher.dll`（1.0.2.0）和新的 `AutoWatcher.json`、`workshop.json`、`image.png`。
-- [ ] **全量 32 条未跑。** 上一次全量是 2026-09-09 的 30/30，对的是求解器 `0.34.7`；
-      这一版换了求解器和观者两样，值得再跑一遍全量（约 30 分钟）。
+- [x] **全量 32/32 通过**（2026-09-10 00:20–00:41，求解器 `0.34.8` + 观者 `0.9.28`）。
+      0 失败、0 未运行，21 分钟跑完，单条约 39 秒（0.34.7 那会儿是 ~52 秒）。
 - [ ] 上传创意工坊 `3797303841`。
 - [ ] GitHub release `v1.0.2`，附 `AutoWatcher-1.0.2.zip` 和
       [publish/RELEASE_NOTES_1.0.2.md](RELEASE_NOTES_1.0.2.md)。
