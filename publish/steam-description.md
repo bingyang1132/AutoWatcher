@@ -55,7 +55,7 @@
 
 [list]
 [*]自动战斗求解器，[b]至少 0.32.0[/b]
-[*]观者（作者 Boninall），0.9.25 起
+[*]观者（作者 Boninall），0.9.28 起
 [*]RitsuLib
 [/list]
 
@@ -129,7 +129,7 @@ automate playing the Watcher. It changes no game behaviour and no numbers.
 
 [list]
 [*]Combat Solver, [b]0.32.0 or newer[/b]
-[*]Watcher (by Boninall), 0.9.25 or newer
+[*]Watcher (by Boninall), 0.9.28 or newer
 [*]RitsuLib
 [/list]
 

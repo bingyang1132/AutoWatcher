@@ -207,8 +207,12 @@ internal static class WatcherSimVerbs
         if (PowerAmount<NirvanaPower>(sim) is > 0 and var nirvana)
             BlockFor(sim, nirvana, ValueProp.Unpowered);
 
+        // 按类型认，不按 id 字符串。观者 0.9.27 这里写的是 `Id.Entry == "WEAVE"`，而经纬的
+        // 真实 id 是 `WATCHER_WEAVE`，所以那一版实机根本没把经纬收回来；0.9.28 改成了
+        // `card is WatcherWeave`。我们一直按 `WATCHER_WEAVE` 匹配，也就是一直在照“本该如此”
+        // 的行为算——0.9.27 上偏乐观，0.9.28 起才对得上。改成类型判据与上游同源。
         PredictedCard[] weaves = sim.OwnerState.DiscardPile.Cards
-            .Where(card => card.Preview.Id.Entry == "WATCHER_WEAVE")
+            .Where(card => card.Preview is WatcherWeave)
             .ToArray();
         if (weaves.Length > 0)
             sim.Simulator.AddToPile(weaves, PileType.Hand);

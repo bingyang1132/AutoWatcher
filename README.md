@@ -12,7 +12,7 @@
 | 依赖 | 版本要求 | 说明 |
 |---|---|---|
 | 自动战斗求解器（CombatSolver） | **至少 0.32.0** | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) ／ [GitHub](https://github.com/Torch1230/CombatSolver) |
-| 观者（Watcher，作者 Boninall） | 0.9.25 起 | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
+| 观者（Watcher，作者 Boninall） | 0.9.28 起 | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
 | RitsuLib | — | [创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
 
 **版本不对会怎样：**

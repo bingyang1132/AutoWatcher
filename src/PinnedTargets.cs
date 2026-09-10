@@ -57,20 +57,40 @@ internal static class PinnedTargets
     /// </remarks>
     public static readonly Version CombatSolverMinimumVersion = new(0, 32, 0);
 
-    /// <summary>已经逐个动词核对过的那一份观者：v0.9.27，Workshop 3747526116。</summary>
+    /// <summary>已经逐个动词核对过的那一份观者：v0.9.28，Workshop 3747526116。</summary>
     /// <remarks>
-    /// 逐个动词的核对是在 v0.9.25 上做的。抬到 0.9.27 不是重新核对了一遍，而是把两版反编译出来
-    /// 整体 diff 过：605 行改动**全在 VFX**（新增 <c>StsWaveGhostEffect</c>、
-    /// <c>StsWaveProjectileEffect</c>、<c>WaveCrescent</c>，几处描边颜色与透明度，
-    /// 一个着色器字符串的换行符），<c>OnPlay</c>、<c>CanonicalVars</c>、<c>DynamicVars[...]</c>
-    /// 的改动是 0 条，适配层依赖的十个类型和辅助类一个都没被碰到。所以 0.9.25 的核对结论对
-    /// 0.9.27 成立。证据见 docs/VERIFICATION.md「观者 0.9.25 → 0.9.27」。
+    /// 逐个动词的核对是在 v0.9.25 上做的，之后每次抬这个常量都是把两版反编译出来整体 diff、
+    /// 只确认核对结论仍然成立，不是重新核对一遍。历次证据见 docs/VERIFICATION.md。
+    ///
+    /// <para>
+    /// 0.9.27 → 0.9.28 是 +927 / −25 行，其中 648 行是新的审判锤特效。逐条看下来只有两处动了
+    /// 玩法，两处都已经跟进：
+    /// </para>
+    /// <list type="number">
+    /// <item>
+    /// <b>通晓万物</b>多了一道「被卡牌逻辑挡住就直接消耗」，见
+    /// <c>WatcherCardChoices.OmniscienceApply</c>。这一处不跟进会静默算错：求解器把双倍出牌
+    /// 算进路线，实机只是消耗掉。
+    /// </item>
+    /// <item>
+    /// <b>预见</b>回收经纬的判据从 <c>Id.Entry == "WEAVE"</c> 改成 <c>card is WatcherWeave</c>。
+    /// 前者匹配不上（真实 id 是 <c>WATCHER_WEAVE</c>），也就是 0.9.27 实机压根没回收；
+    /// 0.9.28 是修好了。我们的镜像一直按 <c>WATCHER_WEAVE</c> 算，现在改成同源的类型判据，
+    /// 见 <c>WatcherSimVerbs.Scry</c>。
+    /// </item>
+    /// </list>
+    /// <para>
+    /// 其余全是特效、音效、卡面切换和着色器字符串的换行符：新增 <c>StsJudgmentHammerEffect</c>、
+    /// <c>StsJudgmentGhostEffect</c>、<c>StsJudgmentMoteEffect</c>、<c>StsJudgmentTextEffect</c>
+    /// 和 <c>WatcherJudgmentDeath</c>（一个只改死亡动画的 Harmony 前缀）。审判自己的斩杀判据
+    /// （<c>CurrentHp &lt;= MagicNumber</c> 就击杀）一个字没动。
+    /// </para>
     ///
     /// 抬这个常量的实际作用是让工坊用户不再看到「这一份观者不是核对过的那一版」那句警告——
-    /// 那句话本身是对的，但对着一个只改了特效的版本发警告，只会让真正该注意的时候没人看。
+    /// 那句话本身是对的，但对着一个已经跟进过的版本发警告，只会让真正该注意的时候没人看。
     /// </remarks>
     public const string VerifiedWatcherDllSha256 =
-        "55b477aabfea1117a2dec91b8f9bc51ecc3d813da0911d285a03facd62701eb3";
+        "3262f52087cfbee9d0efd72e193aa6c3d9164b412f499d1c7b46ace0ac4311e5";
 
     public static string? TryComputeSha256(Assembly assembly)
     {

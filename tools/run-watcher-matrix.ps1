@@ -610,6 +610,48 @@ $cases = @(
             "-ExpectedInitialMaxBlockAtLeast", "5",
             "-ExpectedInitialUnmirroredCount", "0"
         )
+    },
+    @{
+        # 观者 0.9.28 给通晓万物加了一道：选中的牌先挪进出牌堆，再看它是不是被自己的卡牌逻辑
+        # 挡住；挡住就直接消耗，不挂双倍也不打出。
+        #
+        # 华丽终章是唯一一张判据只看抽牌堆的原版牌（抽牌堆空才打得出），拿它当探针最干净。
+        # 抽牌堆里除了它还有一张打击，所以把它挪进出牌堆之后抽牌堆仍然非空 -> 它被挡住 ->
+        # 消耗掉，收益 0。选打击则是 6 x 2 = 12。求解器只会选打击。
+        #
+        # 反向对照：把 CardIsPlayableMirrors.Invoke 那一段注掉重新构建，华丽终章变成
+        # 60 x 2 = 120 的群体伤害，求解器改选它，这条挂在"首个选牌是 GRAND_FINALE"。
+        #
+        # 敌人血量给到 200 是为了让两边都杀不掉：一旦有一边能斩杀，判据就被"反正都赢"抹平了。
+        Id = "WATCHER-OMNISCIENCE-BLOCKED-EXHAUST"
+        Tags = @("cards", "hooks")
+        Why = "通晓万物选到一张被自己逻辑挡住的牌时，原版是消耗掉而不是打两次。"
+        Args = @(
+            "-EnemyCurrentHp", "200", "-ClearPlayerPiles", "-InitialPlayerEnergy", "4",
+            "-CardsJson", '[{"cardId":"WATCHER_OMNISCIENCE","pile":"Hand","count":1},{"cardId":"GRAND_FINALE","pile":"Draw","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Draw","count":1}]',
+            "-ExpectedInitialFirstActionCardId", "WATCHER_OMNISCIENCE",
+            "-ExpectedInitialFirstActionChoiceCardId", "WATCHER_STRIKE_P",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
+    },
+    @{
+        # 同一处改动的另一半：那道判定必须在"挪进出牌堆"之后做，不能在之前。
+        #
+        # 抽牌堆里只有华丽终章一张。挪进出牌堆之后抽牌堆空了 -> 它打得出 -> 60 x 2 = 120
+        # 群体伤害，正好斩杀 120 血的敌人。判定要是提前到挪之前做，抽牌堆里还有它自己，
+        # 判成打不出、被消耗，本回合 0 伤害，斩杀不了。
+        #
+        # 判据是"正好第 1 回合结束战斗"，不吃路线偏好：可选的牌只有一张。
+        Id = "WATCHER-OMNISCIENCE-PLAY-PILE-ORDER"
+        Tags = @("cards", "hooks")
+        Why = "被挡住的判定要在选中的牌挪进出牌堆之后做，早一步会把华丽终章判成打不出。"
+        Args = @(
+            "-EnemyCurrentHp", "120", "-ClearPlayerPiles", "-InitialPlayerEnergy", "4",
+            "-CardsJson", '[{"cardId":"WATCHER_OMNISCIENCE","pile":"Hand","count":1},{"cardId":"GRAND_FINALE","pile":"Draw","count":1}]',
+            "-ExpectedInitialFirstActionCardId", "WATCHER_OMNISCIENCE",
+            "-ExpectedInitialCombatEndedTurn", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
     }
 )
 

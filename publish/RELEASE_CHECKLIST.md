@@ -130,3 +130,33 @@
 - [x] 创意工坊 `3797303841` 已更新，`visibility` 写成 `public`，改动说明写了这四张牌。
 - [ ] **四条新夹具没有运行。** 作者会在本地单独跑。这一版也没有原版角色的回归证据。
       release 说明里如实写了这一条。
+
+---
+
+## 1.0.2（2026-09-09 准备中）
+
+跟进工坊的观者 `0.9.28` 和求解器 `0.34.8`。
+
+- [x] 观者 `0.9.27 → 0.9.28` 反编译整体 diff：+927 / −25 行，**只有两处动了玩法**，都已跟进。
+      逐条见 [docs/VERIFICATION.md](../docs/VERIFICATION.md)「观者 0.9.27 → 0.9.28」。
+- [x] 钉死的观者副本换成 `0.9.28`，`PinnedTargets.VerifiedWatcherDllSha256` 和 csproj 的构建期
+      校验值同步更新（`3262f520…c4311e5`）。构建 **0 警告**，也就是哈希对上了。
+- [x] 求解器换到 `0.34.8`（Release 构建并部署），适配层对着它重编，`SolverCompat` 的三个反射
+      入口仍然在（`GrowthSourceMirrors`、`CardRemovalValueMirrors`、`PowerHiddenStateMirrors`）；
+      `LongTermGoals` 照旧不在发布版里，按设计跳过。
+- [x] `AutoWatcher.json`：`version` = `1.0.2`，`Watcher.min_version` `0.9.25 → 0.9.28`。
+      求解器最低版本**仍是** `0.32.0` —— 新用到的 `CardIsPlayableMirrors.Invoke` 从 `0.32.0`
+      起签名没变过，抬门槛没有理由。
+- [x] 夹具 30 → **32**，通晓万物那两条各验一半，正向都通过；`BLOCKED-EXHAUST` 的反向对照
+      也做过（注掉判定 → 挂在「首个选牌是 `GRAND_FINALE`」）。
+- [x] 面向用户的文案里观者要求从 `0.9.25 起` 改成 `0.9.28 起`：`README.md`、`README.en.md`、
+      `publish/steam-description.md` 中英两份。
+- [x] `publish/workshop.json` 重新生成，`changeNote` 写的是 1.0.2 的实际改动。
+- [x] 上传工作区 `ModUploader-win-x64/AutoWatcherWorkshop/` 已换成 Release 构建的
+      `AutoWatcher.dll`（1.0.2.0）和新的 `AutoWatcher.json`、`workshop.json`、`image.png`。
+- [ ] **全量 32 条未跑。** 上一次全量是 2026-09-09 的 30/30，对的是求解器 `0.34.7`；
+      这一版换了求解器和观者两样，值得再跑一遍全量（约 30 分钟）。
+- [ ] 上传创意工坊 `3797303841`。
+- [ ] GitHub release `v1.0.2`，附 `AutoWatcher-1.0.2.zip` 和
+      [publish/RELEASE_NOTES_1.0.2.md](RELEASE_NOTES_1.0.2.md)。
+- [ ] 这一版仍然没有原版角色的回归证据，release 说明里如实写了。

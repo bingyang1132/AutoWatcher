@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models.Powers;
 using CombatSolver;
 using CombatSolver.Engine.Common;
+using CombatSolver.Engine.InCombat.Mirrors.Cards;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
 
@@ -190,6 +191,11 @@ internal static class WatcherCardChoices
     /// （<c>ModifyCardPlayCountMirrors.AfterRegistry</c>）。顺序照原版：先挂 Power 再打。
     ///
     /// 抽牌堆为空时原版直接返回，所以候选为空时下界给 0——否则搜索会永远等一个做不出的选择。
+    ///
+    /// 观者 0.9.28 在自动打出之前加了一道：把选中的牌先挪进出牌堆，再看它是不是被自己的
+    /// 卡牌逻辑挡住（<c>UnplayableReason.BlockedByCardLogic</c>）。挡住就直接消耗掉，
+    /// 既不挂 <c>OmniscienceDoublePower</c> 也不打出。这一步必须原样照做：不做的话，
+    /// 求解器会把一次完整的双倍出牌算进路线，实机却只是把牌消耗了。
     /// </remarks>
     private static CardChoiceSpec OmniscienceSpec(
         CombatPredictionSimulator simulator,
@@ -219,6 +225,19 @@ internal static class WatcherCardChoices
         if (chosen.Count == 0)
             return !simulator.HasPendingChoice;
 
+        // 顺序照 0.9.28：先把选中的牌挪进出牌堆，再判它自己的可打出条件。反过来会算错——
+        // 华丽终章那一类判据读的正是抽牌堆，牌还留在抽牌堆里的时候永远判成打不出。
+        simulator.AddToPile(chosen[0], PileType.Play);
+        if (simulator.HasPendingChoice)
+            return false;
+
+        // 被牌自己的逻辑挡住时原版直接消耗：不挂双倍，也不打出。
+        if (!CardIsPlayableMirrors.Invoke(simulator, chosen[0]))
+        {
+            simulator.Exhaust(chosen[0]);
+            return !simulator.HasPendingChoice;
+        }
+
         combat.ApplyPower(
             typeof(OmniscienceDoublePower), card.Owner.Creature, 1, card.Owner.Creature);
 
@@ -237,7 +256,7 @@ internal static class WatcherCardChoices
 
         // 原版：牌还在场上、而且不在消耗堆里，才消耗它。自动打出可能已经把它消耗掉了
         // （比如它自己带消耗），那种情况不能再消耗一次。
-        if (played && chosen[0].Preview.Pile?.Type != PileType.Exhaust)
+        if (played && chosen[0].GetPile(simulator.State)?.Type != PileType.Exhaust)
         {
             simulator.Exhaust(chosen[0]);
             if (simulator.HasPendingChoice)

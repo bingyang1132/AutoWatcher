@@ -13,7 +13,7 @@ automate playing the Watcher. It changes no game behaviour and no numbers (the m
 | Dependency | Version | Where |
 |---|---|---|
 | Combat Solver | **0.32.0 or newer** | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) / [GitHub](https://github.com/Torch1230/CombatSolver) |
-| Watcher (by Boninall) | 0.9.25 or newer | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
+| Watcher (by Boninall) | 0.9.28 or newer | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
 | RitsuLib | — | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
 
 **What happens on a version mismatch:**

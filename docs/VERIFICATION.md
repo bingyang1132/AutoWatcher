@@ -19,8 +19,8 @@
 
 | 依赖 | 钉死方式 | 值 |
 |---|---|---|
-| 观者 mod | 文件 SHA256 | `9b6d6b88…f377733`（v0.9.25，Workshop 3747526116） |
-| 求解器 | 程序集版本 | `0.29.0.0` |
+| 观者 mod | 文件 SHA256 | `3262f520…c4311e5`（v0.9.28，Workshop 3747526116） |
+| 求解器 | 程序集版本下限 | `0.32.0`（当前实测跑在 `0.34.8.0` 上） |
 | 游戏 | 清单 `min_game_version` | `0.111.0`（public-beta） |
 
 观者按**哈希**钉死而不是按版本号，因为作者不一定每次改动都升版本号，而适配层是按反编译出来的
@@ -686,6 +686,76 @@ SV.TemporaryDexterity(sim, typeof(YangDexterityPower), 1);   // 对
 
 新增的 `WATCHER-YANG-TEMPORARY-DEXTERITY` 也在这一轮里，正反都验过：打了补丁最高可起防 5，
 改回 `SV.Power` 挂在「首轮最高可起防仅 3，低于预期 5」。
+
+### 观者 0.9.27 → 0.9.28（2026-09-09 跟进）
+
+反编译整体 diff：**+927 / −25 行**。其中 648 行是新的审判锤特效（`StsJudgmentHammerEffect`、
+`StsJudgmentGhostEffect`、`StsJudgmentMoteEffect`、`StsJudgmentTextEffect`），另有
+`WatcherJudgmentDeath`——一个只改死亡动画的 Harmony 前缀，`WatcherCinematicHelper` 的定格闪白，
+卡面 beta 图开关，以及两处着色器字符串的换行符从 `
+` 变成 `
+`。
+
+**动了玩法的只有两处，两处都已跟进：**
+
+**一、通晓万物。** 0.9.28 在自动打出之前插了一步：
+
+```csharp
+await CardPileCmd.Add(chosenCard, (PileType)5 /* Play */, (CardPilePosition)1, null, false);
+if (WatcherCombatHelper.IsBlockedByCardLogic(chosenCard))
+{
+    await CardCmd.Exhaust(choiceContext, chosenCard, false, false);
+    return;                       // 不挂 OmniscienceDoublePower，也不打出
+}
+```
+
+`IsBlockedByCardLogic` 判的是 `card.CanPlay(...)` 失败且原因里带
+`UnplayableReason.BlockedByCardLogic`（值 8），也就是**牌自己的条件**不满足——原版里只有
+华丽终章（抽牌堆空才打得出）和几张同类。不跟进的话求解器会把一次完整的双倍出牌算进路线，
+实机只是把牌消耗掉。
+
+镜像照抄，包括**顺序**：先 `AddToPile(chosen, PileType.Play)` 再判。反过来会算错——华丽终章
+的判据读的正是抽牌堆，牌还留在抽牌堆里的时候永远判成打不出。求解器现成的
+`CardIsPlayableMirrors.Invoke` 就是 `CardModel.IsPlayable` 的镜像，正好对应这一位，
+`0.32.0` 起签名没变过。
+
+顺带修了同一段里的一处读法：判「自动打出之后牌还在不在消耗堆」原来读的是
+`chosen[0].Preview.Pile`，那是**实机模型**上的牌堆，模拟里的克隆不维护它，所以那个条件
+基本恒真、自带消耗的牌会被消耗两次。改成 `chosen[0].GetPile(simulator.State)`。
+
+**二、预见回收经纬。** 判据从 `Id.Entry == "WEAVE"` 改成 `card is WatcherWeave`。经纬的真实
+id 是 `WATCHER_WEAVE`，所以 0.9.27 那个字符串**从来没匹配上**，实机压根没把经纬收回来；
+0.9.28 是把它修好了。我们的镜像一直按 `WATCHER_WEAVE` 匹配，也就是一直在照「本该如此」算——
+在 0.9.27 上偏乐观，0.9.28 起才真正对得上。现在改成同源的类型判据。
+
+**审判自己的斩杀判据一个字没动**（`CurrentHp <= MagicNumber` 就 `Kill`）。0.9.28 只是把它
+包进了特效的等待和 `Mark`/`Unmark`，`fatal` 的计算提到了 0.52 秒特效等待之前——在模拟里
+这两种写法等价。
+
+两条新夹具：
+
+| 夹具 | 验的是 | 反向对照 |
+|---|---|---|
+| `WATCHER-OMNISCIENCE-BLOCKED-EXHAUST` | 挡住 → 消耗，不是打两次 | 已做，见下 |
+| `WATCHER-OMNISCIENCE-PLAY-PILE-ORDER` | 判定必须在挪进出牌堆**之后** | 判定提前就把华丽终章判成打不出，斩杀不了 |
+
+`BLOCKED-EXHAUST` 的判据不吃路线偏好：抽牌堆里放华丽终章加一张观者打击，选华丽终章的收益
+是 **0**（挪进出牌堆后抽牌堆仍有一张打击，判定挡住 → 消耗），选打击是 **6 × 2 = 12**。
+敌人 200 血，两边都杀不掉，避免「反正都赢」把判据抹平。
+
+`PLAY-PILE-ORDER` 的判据是「正好第 1 回合结束战斗」：抽牌堆里只有华丽终章一张，挪进出牌堆后
+抽牌堆空了 → 打得出 → 60 × 2 = 120 群体伤害，正好斩杀 120 血。可选的牌只有一张，不涉及偏好。
+**注意这一条不是新行为的回归测试**——改动之前根本不判定，照样会打出去，所以它也过。
+它挡的是「以后有人把判定挪到 `AddToPile` 前面」这一种写法。
+
+两条都跑过（2026-09-09，求解器 `0.34.8`，观者 `0.9.28`）：
+
+- `WATCHER-OMNISCIENCE-PLAY-PILE-ORDER` 通过。
+- `WATCHER-OMNISCIENCE-BLOCKED-EXHAUST` 正向通过；**反向对照做过**——把
+  `CardIsPlayableMirrors.Invoke` 那一段注掉重新构建，挂在
+  「首轮第一个动作的首个选牌是 `GRAND_FINALE`，预期包含 `WATCHER_STRIKE_P`」，
+  恢复后重新通过。求解器在没有这道判定时确实会去选华丽终章（它以为能打出 60 × 2 的群体伤害），
+  正是这一版要消掉的错算。
 
 ## 强度验收标准
 
