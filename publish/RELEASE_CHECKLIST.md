@@ -228,4 +228,9 @@
 - [x] `README.md` / `README.en.md` / `docs/VERIFICATION.md` / `publish/steam-description.md`
       的已知缺口从 1 处改成 2 处，并写明斋戒那条**会静默算错**。
 - [x] `publish/workshop.json` 重新生成，`changeNote` 写的是 1.0.3 的实际改动。
-
+- [x] 上传工作区 `ModUploader-win-x64/AutoWatcherWorkshop/` 换成 Release 构建的 `AutoWatcher.dll`
+      （1.0.3.0）和新的 `AutoWatcher.json`、`workshop.json`、`image.png`。
+- [x] GitHub release [`v1.0.3`](https://github.com/bingyang1132/AutoWatcher/releases/tag/v1.0.3)，
+      附 `AutoWatcher-1.0.3.zip`，说明用的是 [publish/RELEASE_NOTES_1.0.3.md](RELEASE_NOTES_1.0.3.md)。
+- [x] 上传创意工坊 `3797303841`（2026-09-12）。中英两份标题描述都传了，三个依赖没动。
+- [x] 这一版仍然没有原版角色的回归证据，release 说明里如实写了。
