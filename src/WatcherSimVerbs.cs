@@ -164,7 +164,7 @@ internal static class WatcherSimVerbs
 
     /// <summary>对应 WatcherCombatHelper.GetEffectiveScryAmount。</summary>
     /// <remarks>
-    /// 金瞳和守视都是按遗物 ID 或 Power 存在性轮询的，不是钩子，所以必须在这里读，光靠钩子
+    /// 黄金眼和守视都是按遗物 ID 或 Power 存在性轮询的，不是钩子，所以必须在这里读，光靠钩子
     /// 镜像会漏掉。加成先于扣减，且基础值为零时整条短路。
     /// </remarks>
     public static int EffectiveScryAmount(WatcherSim sim, int amount)
@@ -187,28 +187,44 @@ internal static class WatcherSimVerbs
     /// 候选必须按抽牌堆的实际顺序给，下标 0 是牌堆顶。部署时求解器要拿这个顺序去原生选牌页面
     /// 上定位卡牌，顺序错了就会选错张。
     ///
-    /// 分支不是白开的。卡牌预见一回合最多几次，展开完整子集划得来；香料每次洗牌都触发，
+    /// 分支不是白开的。卡牌预见一回合最多几次，展开完整子集划得来；美琅脂每次洗牌都触发，
     /// 而能循环整个牌库的牌组一回合能洗十几次，那样每次洗牌都把搜索宽度乘一遍，会把出牌
     /// 决策整个压过去——实测一局无限里预见分支 `75224` 条、节点展开只有 `15549` 条，单次搜索
     /// 70 秒。所以按来源分：卡牌照常展开，遗物收成一条。
     ///
-    /// 连带效果照原版 OnScry 实现：涅槃按层数给不受力量影响的格挡，弃牌堆里的经纬回手。
+    /// 连带效果照原版 OnScry 实现：涅槃按层数给不受力量影响的格挡，弃牌堆里的迂回回手。
     /// 这两样都在挑牌之前结算。
     /// </remarks>
     /// <param name="maxBranches">
-    /// 给 1 表示按固定策略作答、不在搜索里展开分支。每次洗牌都触发的来源（香料）要这样用。
+    /// 给 1 表示按固定策略作答、不在搜索里展开分支。每次洗牌都触发的来源（美琅脂）要这样用。
     /// </param>
     public static void Scry(WatcherSim sim, int amount, string source, int? maxBranches = null)
     {
+        if (amount <= 0)
+            return;
+
+        // 抽牌堆空了先洗一次，照 CardPileCmd.ShuffleIfNecessary：抽牌堆空且弃牌堆非空才洗。
+        // 观者 0.9.28 的两个预见入口都在取牌之前做这件事，以前这里直接返回，于是实机把弃牌堆
+        // 洗回去、弹出选牌页面的时候，路线上根本没有这一步。
+        // 递归有界：洗完抽牌堆就不空了，美琅脂在洗牌后触发的那次预见不会再洗第二遍。
+        if (sim.OwnerState.DrawPile.Cards.Count == 0 && sim.OwnerState.DiscardPile.Cards.Count > 0)
+            sim.Simulator.Shuffle(sim.Owner);
+
+        // 洗完还是空，或者有效张数被守视减到零：原版在这两种情况下都**不结算 OnScry**，
+        // 直接返回。涅槃的格挡和迂回回手必须放在这道门后面。
+        if (sim.OwnerState.DrawPile.Cards.Count == 0)
+            return;
+
         int effective = EffectiveScryAmount(sim, amount);
-        if (effective <= 0)
+        PredictedCard[] looked = sim.OwnerState.DrawPile.Cards.Take(effective).ToArray();
+        if (looked.Length == 0)
             return;
 
         if (PowerAmount<NirvanaPower>(sim) is > 0 and var nirvana)
             BlockFor(sim, nirvana, ValueProp.Unpowered);
 
-        // 按类型认，不按 id 字符串。观者 0.9.27 这里写的是 `Id.Entry == "WEAVE"`，而经纬的
-        // 真实 id 是 `WATCHER_WEAVE`，所以那一版实机根本没把经纬收回来；0.9.28 改成了
+        // 按类型认，不按 id 字符串。观者 0.9.27 这里写的是 `Id.Entry == "WEAVE"`，而迂回的
+        // 真实 id 是 `WATCHER_WEAVE`，所以那一版实机根本没把迂回收回来；0.9.28 改成了
         // `card is WatcherWeave`。我们一直按 `WATCHER_WEAVE` 匹配，也就是一直在照“本该如此”
         // 的行为算——0.9.27 上偏乐观，0.9.28 起才对得上。改成类型判据与上游同源。
         PredictedCard[] weaves = sim.OwnerState.DiscardPile.Cards
@@ -216,10 +232,6 @@ internal static class WatcherSimVerbs
             .ToArray();
         if (weaves.Length > 0)
             sim.Simulator.AddToPile(weaves, PileType.Hand);
-
-        PredictedCard[] looked = sim.OwnerState.DrawPile.Cards.Take(effective).ToArray();
-        if (looked.Length == 0)
-            return;
 
         if (sim.Combat is not ICombatPredictionChoiceSink choices)
         {

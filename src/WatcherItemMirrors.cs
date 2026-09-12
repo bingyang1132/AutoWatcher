@@ -20,12 +20,12 @@ namespace AutoWatcher;
 /// <remarks>
 /// 遗物只有三个需要注册镜像，因为观者的遗物分成三类，只有一类走求解器会分发的钩子：
 ///
-/// 走求解器会分发的钩子（阳、香料、斗篷扣）——不注册的话每次触发都记一条风险。
+/// 走求解器会分发的钩子（阳、美琅脂、斗篷扣）——不注册的话每次触发都记一条风险。
 ///
 /// 战斗开始前触发（清水、泪滴挂坠）——求解器的根快照是在战斗开始之后取的，那张奇迹已经在
 /// 手上、平静已经进了，所以**不需要镜像**，补了反而会重复计算。
 ///
-/// 按遗物 ID 轮询而不是钩子（金瞳、紫色莲花）——它们自己什么都不重写，效果写在观者的辅助函数
+/// 按遗物 ID 轮询而不是钩子（黄金眼、紫色莲花）——它们自己什么都不重写，效果写在观者的辅助函数
 /// 里。所以只能在对应动词里读，已分别在 <see cref="WatcherSimVerbs.EffectiveScryAmount" /> 和
 /// 姿态切换的连带效果里实现。光靠钩子镜像会漏掉这两个。
 ///
@@ -64,10 +64,11 @@ internal static class WatcherItemMirrors
         SV.TemporaryDexterity(sim, typeof(YangDexterityPower), 1);
     }
 
-    /// <summary>香料：自己洗牌后预见 3 张。</summary>
+    /// <summary>美琅脂：自己洗牌后预见 3 张。</summary>
     /// <remarks>
-    /// 实际张数还要过金瞳和守视的加减。预见本身可能因为抽牌堆为空而再触发一次洗牌，原版是
-    /// 有可能递归的；这里的预见动词不重洗牌堆，所以不会递归。
+    /// 实际张数还要过黄金眼和守视的加减。预见动词在抽牌堆为空时会自己洗一次牌（照
+    /// <c>CardPileCmd.ShuffleIfNecessary</c>），那次洗牌会再触发这个钩子一遍——但只有一遍：
+    /// 洗完抽牌堆就不是空的了，第二次预见不会再洗。
     /// </remarks>
     private static void MelangeAfterShuffle(Melange relic, AfterShuffleMirrorContext context)
     {

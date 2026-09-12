@@ -177,3 +177,55 @@
 - 本机部署已换成 `0.35.3` + 观者 `0.9.28` + AutoWatcher `1.0.2`。
 - **32 条矩阵还没有对着 `0.35.3` 跑过**，现有的 32/32 是对 `0.34.8` 的。上游这几版动了回合末
   失血、单体/群体目标判断、死亡后的清理顺序，值得补跑一轮。
+
+## 1.0.3（2026-09-12）
+
+起因是两条玩家报告：「mod 不认识斋戒，每回合都要重算」和「牌库没牌的时候预见会卡住」。
+两条都核到了根因，一条本版修掉，一条修不了、只能先提 PR。
+
+### 改了什么
+
+- [x] `src/WatcherSimVerbs.cs` 的预见动词补上 `ShuffleIfNecessary`：抽牌堆空、弃牌堆非空时先洗
+      一次牌再取牌。观者 `0.9.28` 的两个预见入口都这么做，我们以前直接返回，实机因此会弹出
+      一个路线上不存在的选牌页面。
+- [x] 同一处修正结算顺序：两个牌堆都空、或有效张数为 0 时，原版在结算 OnScry 之前就返回，
+      所以涅槃的格挡和弃牌堆里的迂回回手都挪到了那道门后面。
+- [x] `src/WatcherItemMirrors.cs` 里美琅脂那段注释改掉——「预见动词不重洗牌堆所以不会递归」
+      不再成立。现在会洗一次，而且只会洗一次（洗完抽牌堆就不空了）。
+- [x] 把 `WATCHER_WEAVE` 的中文名从**经纬**改成官方译名**迂回**（`Watcher.pck` 的
+      `localization/zhs/cards.json` 里 `WATCHER_WEAVE.title` = 迂回，按码位核对过）。
+      这是又一次自译出错，`1.0.2` 的 release 正文里已经写出去了。
+
+### 验收
+
+- [x] Release 编译 0 警告 0 错误，对求解器 `0.36.3`。
+- [x] 新增夹具 `WATCHER-SCRY-SHUFFLES-EMPTY-DRAW`，矩阵 32 → **33 条**。
+- [x] **反向对照**：把 `sim.Simulator.Shuffle(sim.Owner)` 那一句换成空语句重新构建，这条立刻挂；
+      恢复后重新通过。
+- [x] 全量 **33/33 通过**（2026-09-12 01:51–02:12，求解器 `0.36.3` + 观者 `0.9.28`）。
+- [x] **前一轮 31/33 是操作失误，不是代码问题。** 反向对照之后用 `Copy-Item` 还原源文件，
+      连备份的时间戳一起还原了，MSBuild 判定「最新」跳过编译却照报生成成功，于是那轮矩阵
+      跑在改坏的适配层上。教训写进了 `docs/headless-harness-playbook.md`。
+
+### 斋戒：本版修不了，已提上游 PR
+
+`WatcherFasting2` 挂 `EnergyDownPower`，重写 `AfterEnergyReset` 每回合扣一点能量。求解器那边
+`PersistentPowerSupport.TriggerAfterEnergyReset` 是一张写死五个原版类型的 switch，**没有第三方
+登记入口**，而且因为不经过 `MethodMirrorRegistry`，漏了连风险都不记。
+
+- [x] 上游 PR [#88](https://github.com/Torch1230/CombatSolver/pull/88)：把那个 switch 改成
+      `AfterEnergyResetMirrors` 注册表，原版五个照原样登记，`EnergyNextTurnPower` 登记成
+      Ignored（它在别处已经结算）。
+- [x] PR 构建上单跑四条对照：三条通过，`WATCHER-DEVA-FORM-ENERGY` 只挂在「未镜像项 0」上——
+      天人形态也重写了这个钩子，我们现在是 Harmony 补的，还没登记。去掉那条断言重跑，路线
+      逐项相同（`combatEndedTurn=2`、`HpLost=4`），只多一条提示。
+- [ ] 上游合并并发版之后，本 Mod 跟一版登记 `EnergyDownPower`，并把
+      `CombatSolver.min_version` 抬到那一版。
+
+### 发布
+
+- [x] `AutoWatcher.json` / `AutoWatcher.csproj`：`version` = `1.0.3`。依赖的最低版本都不动。
+- [x] `README.md` / `README.en.md` / `docs/VERIFICATION.md` / `publish/steam-description.md`
+      的已知缺口从 1 处改成 2 处，并写明斋戒那条**会静默算错**。
+- [x] `publish/workshop.json` 重新生成，`changeNote` 写的是 1.0.3 的实际改动。
+

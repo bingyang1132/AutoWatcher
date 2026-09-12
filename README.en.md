@@ -57,11 +57,19 @@ When something breaks, check which pair you have installed first.
 
 ## Known gaps
 
-Just one card's effect is still explicitly recorded as unmirrored: **Draw Talisman** (a weak
-Ancient card the mod adds itself). It **never silently miscalculates** — the solver marks the
-route in red with "unmirrored effect here". A further set of hooks that run through Harmony
-postfixes, or that the solver does not dispatch, is also not covered. These will be filled in over
-the coming releases.
+Two of them:
+
+- **Draw Talisman** (a weak Ancient card the mod adds itself) and its bulk temporary enchantment.
+  It **never silently miscalculates** — the solver marks the route in red with "unmirrored effect
+  here".
+- **Fasting** and its one-less-energy-per-turn. This one **does silently miscalculate**: the
+  solver's power pass right after the turn-start energy reset is a hardcoded vanilla list with no
+  third-party registration point, so this mod cannot mirror it even though it knows what the power
+  does. It shows up as the route being recomputed every turn. A PR opening that registration point
+  is filed upstream; this mod will register there once it ships.
+
+A further set of hooks that run through Harmony postfixes, or that the solver does not dispatch,
+is also not covered. These will be filled in over the coming releases.
 
 Both full lists are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 

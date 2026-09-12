@@ -652,6 +652,26 @@ $cases = @(
             "-ExpectedInitialCombatEndedTurn", "1",
             "-ExpectedInitialUnmirroredCount", "0"
         )
+    },
+    @{
+        # 抽牌堆空、弃牌堆有牌时，原版预见先洗一次牌再看（两个入口都调
+        # CardPileCmd.ShuffleIfNecessary），洗完照常弹选牌页面。
+        #
+        # 这条和 WATCHER-SCRY-DISCARD-BRANCH 是同一个局面，只把四张打击从抽牌堆挪到弃牌堆。
+        # 镜像不洗牌的话天眼看到 0 张，整个预见变成空操作，选牌分支就是 0 条 —— 实机却会
+        # 弹出一个路线上没有的选牌页面，自动出牌停在那里。
+        #
+        # 反向对照做过：把 Shuffle 那一句注掉重新构建，这条立刻挂在选牌分支数上。
+        Id = "WATCHER-SCRY-SHUFFLES-EMPTY-DRAW"
+        Tags = @("cards", "draw")
+        Why = "抽牌堆空、弃牌堆有牌时，预见要先洗牌再看，不能当成空操作。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles",
+            "-CardsJson", '[{"cardId":"WATCHER_THIRD_EYE","pile":"Hand","count":1},{"cardId":"WATCHER_STRIKE_P","pile":"Discard","count":4}]',
+            "-ExpectedInitialFirstActionCardId", "WATCHER_THIRD_EYE",
+            "-ExpectedInitialChoiceBranchesEvaluatedAtLeast", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
     }
 )
 

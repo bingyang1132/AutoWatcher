@@ -73,7 +73,7 @@ internal static class PinnedTargets
     /// 算进路线，实机只是消耗掉。
     /// </item>
     /// <item>
-    /// <b>预见</b>回收经纬的判据从 <c>Id.Entry == "WEAVE"</c> 改成 <c>card is WatcherWeave</c>。
+    /// <b>预见</b>回收迂回的判据从 <c>Id.Entry == "WEAVE"</c> 改成 <c>card is WatcherWeave</c>。
     /// 前者匹配不上（真实 id 是 <c>WATCHER_WEAVE</c>），也就是 0.9.27 实机压根没回收；
     /// 0.9.28 是修好了。我们的镜像一直按 <c>WATCHER_WEAVE</c> 算，现在改成同源的类型判据，
     /// 见 <c>WatcherSimVerbs.Scry</c>。

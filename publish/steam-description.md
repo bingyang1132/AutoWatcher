@@ -89,7 +89,14 @@
 
 [h2]已知缺口[/h2]
 
-只剩 1 张牌的效果显式记为未镜像：画符（mod 自加的先古卡，强度很低）。它[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像的效果」。另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。
+有 2 处：
+
+[list]
+[*][b]画符[/b]（mod 自加的先古卡，强度很低）的批量临时附魔。它[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像的效果」。
+[*][b]斋戒[/b]的每回合减能量。这一处[b]会静默算错[/b]：求解器在「回合开始重置能量之后」这个时点的能力结算是一张写死的原版名单，没有给第三方留登记入口，本 Mod 想认也认不了。表现是牌组里有斋戒之后每回合都重算。已经给求解器提了 PR 开这个入口，上游合并发版后本 Mod 会跟一版登记上。
+[/list]
+
+另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。
 
 光辉只在求解器 0.32.0 上会多记一条风险。它的伤害一直算得对，只是「本场累计获得的真言」这个计数要求解器 0.33.0 才能进搜索的状态判重。工坊的求解器已经是 0.33.x，所以订阅用户不会看到这条
 
@@ -168,11 +175,20 @@ count toward long-term value
 
 [h2]Known gaps[/h2]
 
-Just one card's effect is still explicitly recorded as unmirrored: Draw Talisman (a weak Ancient
-card the mod adds itself). It [b]never silently miscalculates[/b] — the solver marks the route in red
-with "unmirrored effect here". A further set of hooks that run through Harmony postfixes, or that
-the solver does not dispatch, is also not covered. These will be filled in over the coming
-releases.
+Two of them:
+
+[list]
+[*][b]Draw Talisman[/b] (a weak Ancient card the mod adds itself) and its bulk temporary enchantment.
+It [b]never silently miscalculates[/b] — the solver marks the route in red with "unmirrored effect here".
+[*][b]Fasting[/b] and its one-less-energy-per-turn. This one [b]does silently miscalculate[/b]: the solver's
+power pass right after the turn-start energy reset is a hardcoded vanilla list with no third-party
+registration point, so this mod cannot mirror it even though it knows what the power does. It shows up as
+the route being recomputed every turn. A PR opening that registration point is filed upstream; this mod
+will register there once it ships.
+[/list]
+
+A further set of hooks that run through Harmony postfixes, or that the solver does not dispatch,
+is also not covered. These will be filled in over the coming releases.
 
 [h2]FAQ[/h2]
 
