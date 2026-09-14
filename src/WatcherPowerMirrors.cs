@@ -9,6 +9,7 @@ using CombatSolver.Engine.InCombat.Mirrors;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.Block;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.Card;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.Damage;
+using CombatSolver.Engine.InCombat.Mirrors.Hooks.Resources;
 using CombatSolver.Engine.InCombat.Mirrors.Hooks.TurnEnd;
 using CombatSolver.Engine.InCombat.Simulation;
 using WatcherMod;
@@ -41,6 +42,8 @@ internal static class WatcherPowerMirrors
         AfterDamageGivenMirrors.Registry.Register<GospelPower>(Gospel);
         AfterDamageReceivedMirrors.Registry.Register<DeepThoughtSleepPower>(DeepThoughtSleep);
         AfterDamageReceivedMirrors.Registry.Register<WishPlatedArmorPower>(WishPlatedArmorDecay);
+        AfterEnergyResetMirrors.Registry.Register<DevaPower>(DevaForm);
+        AfterEnergyResetMirrors.Registry.Register<EnergyDownPower>(EnergyDown);
         ModifyCardPlayCountMirrors.AfterRegistry.Register<OmniscienceDoublePower>(OmniscienceDouble);
         BeforeSideTurnEndMirrors.Registry.Register<LikeWaterPower>(LikeWater);
         BeforeSideTurnEndMirrors.Registry.Register<WishPlatedArmorPower>(WishPlatedArmorBlock);
@@ -299,6 +302,47 @@ internal static class WatcherPowerMirrors
         if (power.Owner is not { Player: { } owner } || context.Side != power.Owner.Side)
             return;
         SV.BlockFor(Sim(context, owner), power.Amount, ValueProp.Unpowered);
+    }
+
+    /// <summary>斋戒：每回合重置能量之后扣掉等于层数的能量。</summary>
+    /// <remarks>
+    /// 原版是 <c>EnergyDownPower.AfterEnergyReset</c> 一句 <c>PlayerCmd.LoseEnergy(Amount, player)</c>，
+    /// 只判「这次重置是不是自己主人的」。注册表分发本来就只把主人是该玩家的能力发下来，
+    /// 层数为零的也不发，所以这里不用再判一遍。
+    ///
+    /// 走 <c>simulator.LoseEnergy</c> 而不是直接改状态：那个方法镜像的就是 <c>PlayerCmd.LoseEnergy</c>，
+    /// 连战斗收尾时不生效、扣到 0 为止这两条都在里面。
+    ///
+    /// 不补这个镜像的后果是求解器每回合都以为自己多一点能量，执行下来和预测对不上，于是每回合
+    /// 重算，而路线上不会有任何提示说哪里算错了。
+    /// </remarks>
+    private static void EnergyDown(EnergyDownPower power, AfterEnergyResetMirrorContext context)
+        => context.Simulator.LoseEnergy(context.Player, power.Amount);
+
+    /// <summary>天人形态：每回合先按实例表总和给能量，再把每个实例加一。</summary>
+    /// <remarks>
+    /// 一张牌 = 一个实例，实例表存在 <c>_internalData</c> 里，见
+    /// <see cref="WatcherDevaInstances" />。总和就是层数，所以给的能量是层数、涨的层数是实例个数。
+    ///
+    /// 以前这一条是 <c>PersistentPowerSupport.TriggerAfterEnergyReset</c> 上的一个 Harmony postfix：
+    /// 那时求解器那一段是写死五个原版类型的 switch，没有登记入口。现在改成登记，顺带把给能量
+    /// 那一步从直接改状态改成走 <c>simulator.GainEnergy</c>——原版调的是 <c>PlayerCmd.GainEnergy</c>，
+    /// 那条路要过 <c>ModifyEnergyGain</c>，直接改状态会漏掉改能量增益的效果。目前没有这类效果
+    /// 参与，所以这是口径修正，不是行为改动。
+    /// </remarks>
+    private static void DevaForm(DevaPower power, AfterEnergyResetMirrorContext context)
+    {
+        if (power.Owner is not { } owner)
+            return;
+        if (!context.Simulator.State.GetCreature(owner).IsAlive)
+            return;
+        int count = WatcherDevaInstances.InstanceCount(context.Simulator, power);
+        if (count <= 0)
+            return;
+
+        context.Simulator.GainEnergy(context.Player, power.Amount);
+        if (context.Combat.GetMutablePower<DevaPower>(owner) is { } mutable)
+            context.Combat.SetPowerAmount(mutable, mutable.Amount + count);
     }
 
     /// <summary>观者反复用的那个判定：算作招式伤害且不是无强化伤害。</summary>

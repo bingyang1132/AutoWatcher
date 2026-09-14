@@ -672,6 +672,26 @@ $cases = @(
             "-ExpectedInitialChoiceBranchesEvaluatedAtLeast", "1",
             "-ExpectedInitialUnmirroredCount", "0"
         )
+    },
+    @{
+        # 斋戒挂的 EnergyDownPower 每回合重置能量之后扣 1 点。算术判据：
+        # 第一回合 3 费打三张打击+ = 18 点（重置发生在第二回合开始，第一回合不扣）；
+        # 第二回合起每回合只有 2 费 = 12 点。敌人 36 血，要打到第三回合才死。
+        # 不补这个镜像的话求解器以为第二回合还有 3 费，18 + 18 = 36 正好第二回合斩杀。
+        #
+        # 这一条同时盯两件事：回合数（算错了就变 2）和未镜像项（没登记就 Unsupported 记风险）。
+        # 反向对照做过：把那条登记注掉重新构建，先挂在未镜像项上；再把未镜像那条断言也去掉，
+        # 挂在「首轮预计战斗结束回合为 2，预期为 3」——也就是说少算的不只是一条提示，是路线本身。
+        Id = "WATCHER-FASTING-ENERGY-DOWN"
+        Tags = @("hooks", "cards")
+        Why = "斋戒每回合少 1 费。少算这一点，求解器每回合都会发现执行和预测对不上而重算。"
+        Args = @(
+            "-EnemyCurrentHp", "36", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-PowerId", "ENERGY_DOWN_POWER", "-PowerAmount", "1", "-PowerTarget", "Player",
+            "-CardsJson", '[{"cardId":"WATCHER_STRIKE_P","pile":"Hand","count":4},{"cardId":"WATCHER_STRIKE_P","pile":"Draw","count":8}]',
+            "-ExpectedInitialCombatEndedTurn", "3",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
     }
 )
 
