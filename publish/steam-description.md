@@ -21,7 +21,7 @@
 2. **能靠常见问题承载的，正文不重复。** 「三个都要装」「版本不对会怎样」这些从需求列表下面
    删掉了 —— 需求列表本身已经说明白了，细节留给常见问题。
 3. **常见问题只放玩家真会遇到、而且需要自己动手的问题。** 作者砍掉了三条：
-   「为什么要 0.32.0」（属于设计理由）、「报 Bug 为什么要问题包」（属于流程解释）、
+   「为什么要 0.38.2」（属于设计理由）、「报 Bug 为什么要问题包」（属于流程解释）、
    「以手拒之的排序」（属于开发史）。**开发史和设计理由不进对外文案**，它们的位置在
    `docs/VERIFICATION.md`。
 4. **已知缺口要点名具体是哪几张牌**，玩家才知道自己会不会碰到。只给数字没有用。
@@ -54,7 +54,7 @@
 [h2]需要装什么[/h2]
 
 [list]
-[*]自动战斗求解器，[b]至少 0.32.0[/b]
+[*]自动战斗求解器，[b]至少 0.38.2[/b]
 [*]观者（作者 Boninall），0.9.28 起
 [*]RitsuLib
 [/list]
@@ -64,7 +64,7 @@
 适配层是贴着求解器的内部接口写的，求解器一改，适配层就可能得跟一次。所以本 Mod 分两条线发布：
 
 [list]
-[*][b]创意工坊版[/b]，也就是你现在看的这个 —— 对标求解器的[b]发布版[/b]（0.32.0 起）。
+[*][b]创意工坊版[/b]，也就是你现在看的这个 —— 对标求解器的[b]发布版[/b]（0.38.2 起）。
 订阅即可。普通情况用这个就行。
 [*][b]GitHub 版[/b] —— 对标某一个确定的求解器版本，可能是还没发布的开发版。每个 release 会写明它对标哪一个求解器版本并给出链接。
 [/list]
@@ -89,22 +89,19 @@
 
 [h2]已知缺口[/h2]
 
-有 2 处：
+有 1 处：
 
 [list]
 [*][b]画符[/b]（mod 自加的先古卡，强度很低）的批量临时附魔。它[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像的效果」。
-[*][b]斋戒[/b]的每回合减能量。这一处[b]会静默算错[/b]：求解器在「回合开始重置能量之后」这个时点的能力结算是一张写死的原版名单，没有给第三方留登记入口，本 Mod 想认也认不了。表现是牌组里有斋戒之后每回合都重算。已经给求解器提了 PR 开这个入口，上游合并发版后本 Mod 会跟一版登记上。
 [/list]
 
 另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。
-
-光辉只在求解器 0.32.0 上会多记一条风险。它的伤害一直算得对，只是「本场累计获得的真言」这个计数要求解器 0.33.0 才能进搜索的状态判重。工坊的求解器已经是 0.33.x，所以订阅用户不会看到这条
 
 [h2]常见问题[/h2]
 
 [b]装了本 Mod，求解器还是停在「检测到不兼容的第三方 Mod」？[/b]
 说明适配层没有加载。日志里 AutoWatcher 开头那几行会写明原因，最常见的是求解器版本低于
-0.32.0。适配层是全有或全无：前提不成立就一个镜像都不注册，绝不装一半。
+0.38.2。适配层是全有或全无：前提不成立就一个镜像都不注册，绝不装一半。
 
 [b]工坊版和 GitHub 版可以混着装吗？[/b]
 不要。混了也不会静默出错——结构自检对不上就拒绝加载——但没必要。出了问题优先看你装的是哪一对。
@@ -135,7 +132,7 @@ automate playing the Watcher. It changes no game behaviour and no numbers.
 [h2]Requirements[/h2]
 
 [list]
-[*]Combat Solver, [b]0.32.0 or newer[/b]
+[*]Combat Solver, [b]0.38.2 or newer[/b]
 [*]Watcher (by Boninall), 0.9.28 or newer
 [*]RitsuLib
 [/list]
@@ -146,7 +143,7 @@ The adapter is written against the solver's internal interfaces, so when the sol
 adapter may have to be brought back in line. Hence two channels:
 
 [list]
-[*][b]Steam Workshop[/b] — this page. Targets [b]released[/b] solver builds (0.32.0 and up).
+[*][b]Steam Workshop[/b] — this page. Targets [b]released[/b] solver builds (0.38.2 and up).
 Just subscribe. This is the one you normally want.
 [*][b]GitHub[/b] — targets one specific solver version, possibly a development build. Every
 release states which solver version it was built against and links to it.
@@ -175,16 +172,11 @@ count toward long-term value
 
 [h2]Known gaps[/h2]
 
-Two of them:
+One of them:
 
 [list]
 [*][b]Draw Talisman[/b] (a weak Ancient card the mod adds itself) and its bulk temporary enchantment.
 It [b]never silently miscalculates[/b] — the solver marks the route in red with "unmirrored effect here".
-[*][b]Fasting[/b] and its one-less-energy-per-turn. This one [b]does silently miscalculate[/b]: the solver's
-power pass right after the turn-start energy reset is a hardcoded vanilla list with no third-party
-registration point, so this mod cannot mirror it even though it knows what the power does. It shows up as
-the route being recomputed every turn. A PR opening that registration point is filed upstream; this mod
-will register there once it ships.
 [/list]
 
 A further set of hooks that run through Harmony postfixes, or that the solver does not dispatch,
@@ -194,7 +186,7 @@ is also not covered. These will be filled in over the coming releases.
 
 [b]I installed this mod and the solver still stops at "incompatible third-party mod detected".[/b]
 The adapter did not load. The lines starting with AutoWatcher in the log say why; the most common
-reason is a solver older than 0.32.0. The adapter is all-or-nothing: if its prerequisites do not
+reason is a solver older than 0.38.2. The adapter is all-or-nothing: if its prerequisites do not
 hold it registers nothing at all rather than half of itself.
 
 [b]Can I mix the Workshop build with the GitHub build?[/b]

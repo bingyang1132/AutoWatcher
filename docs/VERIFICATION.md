@@ -116,7 +116,7 @@ dotnet build AutoWatcher.csproj -c Release
 
 | 内容 | 怎么解决的 |
 |---|---|
-| `WatcherFasting2`（斋戒）的 `EnergyDownPower` | 每回合开始少一点能量。求解器在这个时点的能力结算原先是一张写死五个原版类型的 switch，**没有第三方登记入口，漏了也不记风险**。上游 PR #88 把它改成 `AfterEnergyResetMirrors` 注册表，本 Mod 在那里登记 `EnergyDownPower`。**要求求解器带上这个改动**——上游合并发版前，只有本地构建能用 |
+| `WatcherFasting2`（斋戒）的 `EnergyDownPower` | 每回合开始少一点能量。求解器在这个时点的能力结算原先是一张写死五个原版类型的 switch，**没有第三方登记入口，漏了也不记风险**。上游 PR #88 把它改成 `AfterEnergyResetMirrors` 注册表，本 Mod 在那里登记 `EnergyDownPower`。**要求求解器 `0.38.2` 或更高**——那是这个注册表第一次进发布产物（2026-09-14 合并发版） |
 | `WATCHER_CONJURE_BLADE` 生成的 `WATCHER_EXPUNGER` 段数 | 生成接口会把加进去的那张牌返回出来，拿到之后写 `HitCount` 即可——原版也是先建后赋值再入堆。落点是 `DynamicVars.Repeat`，普通数值变量，会进指纹 |
 | `WATCHER_PRESSURE_POINTS` 的无视格挡伤害 | 原版走的是 `CreatureCmd.Damage` 而不是 `DamageCmd.Attack`，求解器的 `Damage` 重载本身就收 `ValueProp`，照 `Unblockable \| Unpowered` 调即可。不能用攻击动词，那条路会套上全部攻击修正 |
 | `WATCHER_BRILLIANCE` 的伤害 | 数值一直算得对，缺的是累计真言进指纹。求解器 0.33.0 起有 `PowerHiddenStateMirrors`，登记一个读取函数即可，见下面「隐藏状态这一类」 |

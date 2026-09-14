@@ -49,13 +49,17 @@ internal static class PinnedTargets
     /// 求解器的最低版本。适配层要接进它的内部注册表，这些注册表是逐版加进去的。
     /// </summary>
     /// <remarks>
-    /// <c>0.32.0</c> 是第一个**发布产物里就带全**适配层需要的五条扩展点的版本：第三方战略估值、
-    /// 药水选择、卡牌选择、牌堆弃牌、可打出性覆盖。前一个版本 <c>0.31.3</c> 的源码里有前四条，
-    /// 但发布的二进制不含卡牌选择那一条（它是随后合进主线的），所以不能拿它当下限。
+    /// <c>0.38.2</c> 是第一个带 <c>AfterEnergyResetMirrors</c> 注册表的发布版（上游合并 PR #88）。
+    /// 斋戒的 <c>EnergyDownPower</c> 和天人形态的 <c>DevaPower</c> 都登记在那里，装在更低的版本上
+    /// 会直接找不到类型而加载失败——所以这条下限是硬的，不是保守估计。
+    ///
+    /// 上一条下限是 <c>0.32.0</c>：第一个**发布产物里就带全**五条扩展点的版本（第三方战略估值、
+    /// 药水选择、卡牌选择、牌堆弃牌、可打出性覆盖）。前一版 <c>0.31.3</c> 的源码里有前四条，但
+    /// 发布的二进制不含卡牌选择那一条，所以当时也不能拿它当下限。
     ///
     /// 光看版本号仍然不够——这就是结构自检存在的理由。
     /// </remarks>
-    public static readonly Version CombatSolverMinimumVersion = new(0, 32, 0);
+    public static readonly Version CombatSolverMinimumVersion = new(0, 38, 2);
 
     /// <summary>已经逐个动词核对过的那一份观者：v0.9.28，Workshop 3747526116。</summary>
     /// <remarks>
