@@ -47,6 +47,10 @@
 
 ---
 
+[h2]★ 1.0.4 更新公告：修复斋戒问题[/h2]
+
+此前斋戒因为求解器端没有接口，每回合都需要重算，体验很差。现已修复。也因此，本版需要求解器 0.38.2 或更高（工坊版满足要求）。
+
 让[b]杀戮尖塔2自动战斗求解器[/b]适用于[b]观者[/b]。
 
 自动战斗求解器本身不兼容观者，本 Mod 装上之后求解器可以自动化观者的打牌。不改变任何游戏行为和数值。
@@ -123,6 +127,10 @@
 ## 正文 · English
 
 ---
+
+[h2]★ 1.0.4 announcement: Fasting fixed[/h2]
+
+Fasting used to force a recompute every turn because the solver had no interface for it, which made for a poor experience. This is now fixed. As a result this version requires solver 0.38.2 or newer (the Workshop build qualifies).
 
 Makes the [b]Slay the Spire 2 combat route solver[/b] work with the [b]Watcher[/b].
 
