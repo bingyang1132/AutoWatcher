@@ -261,5 +261,36 @@
       工坊正文和更新记录都是 BBCode，要粗体用 `[b][/b]`。没有重传修正——重传会在更新日志里
       多出一条重复的同版本条目，比几个星号更难看。下一版注意。
 - [x] tag `v1.0.4` 已推。
-- [ ] **GitHub release 还没建**：`gh release create` 被本地权限策略拦下了，要用户自己跑一次。
-      命令和产物见会话记录，产物是 `AutoWatcher-1.0.4.zip`（DLL + 清单 + 第三方声明）。
+- [x] **GitHub release** [`v1.0.4`](https://github.com/bingyang1132/AutoWatcher/releases/tag/v1.0.4)
+      由用户自己跑 `gh release create` 建的（2026-09-15）——`gh release create` 会被本地权限策略
+      拦下，这一步每版都要交给用户。
+
+## 1.0.5（2026-09-15）
+
+起因是有人报「勤学精进和许愿没适配」。查下来是两个互不相干的 bug 叠在一起：
+
+1. RitsuLib 当天更新到 `0.6.0`，把求解器整个打崩了（`Entry.Initialize()` 抛
+   `MissingMethodException`）。求解器一点功能都没有，看起来当然像什么都没适配。
+   这一条是求解器的问题，已提 [CombatSolver#99](https://github.com/Torch1230/CombatSolver/pull/99)。
+2. 求解器起来之后，勤学精进和许愿的成长额度**确实**没生效——这一条是本 Mod 的 bug，本版修。
+
+- [x] `BindGrowthSourceRegister` 不再写死参数个数。求解器 `0.38.3` 给
+      `GrowthSourceMirrors.Register` 末尾加了第 5 个可选参数，原来的 `== 4` 从那一版起一直返回
+      `null`，**静默**两天。改成核对前 4 项类型 + 容忍多余可选参数；调用侧按实际参数个数建实参数组
+      （固定传 4 个会抛 `TargetParameterCountException`）。
+- [x] 能力探测从两态改成四态（已绑定 / 上游没有 / 签名对不上 / 探测出错），后两种额外单独告警。
+      **这是这次真正的教训**：旧文案让「上游没做」和「我们过期了」长得一模一样，查问题时先被
+      骗了一轮。
+- [x] 扫过一遍，写死参数个数的探测只有那一处。
+- [x] 构建跟上 RitsuLib `0.6.0` 的新目录布局（`lib/<ver>/` → `compat/<ver>/` + `shared/`，
+      包里自带 `RitsuLib.References.props`），两种布局都能编。不然连编都编不过。
+- [x] `AutoWatcher.json` / `AutoWatcher.csproj` 版本号到 `1.0.5`。
+      **最低求解器版本不变**（`0.38.2`）——新判据同时认 4 参和 5 参两种形状。
+- [x] `publish/steam-description.md` 中英两份都加了 1.0.5 更新公告，`workshop.json` 重新生成，
+      `changeNote` 用 BBCode（1.0.4 那次写成 markdown 星号的坑没再踩）。
+- [x] `docs/VERIFICATION.md` 记下这次静默回归的形状，以及「矩阵为什么抓不到」。
+- [ ] **没有运行时回归证据。** RitsuLib `0.6.0` 换布局之后无头 harness 自己也找不到 RitsuLib
+      （`tools/run-unattended-test.ps1` 按 `lib/<游戏API版本>/` 取，而且只搬一个 DLL，新版拆成了
+      多个），`WATCHER-LESSON-LEARNED-FATAL-KILL` 在 harness 阶段就起不来。这一版的证据只有
+      「Release 编译 0 警告」加「对着已部署产物反编译出的签名逐项核对」。release 说明里如实写了。
+      **harness 这一处也是求解器仓库的问题，待修。**

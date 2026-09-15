@@ -121,6 +121,8 @@ internal static class AdapterSelfCheck
                     + "结束照样扣，下一回合开局会多出一个负数。照常注册，但这几个会算错。");
         }
         detail.Append(' ').Append(SolverCompat.Summary).Append('。');
+        // 「签名对不上」是需要有人去改代码的事，单独喊一次，不让它躺在上面那行说明里被读成常态。
+        SolverCompat.WarnOnStaleEntries();
         return new Result(true, detail.ToString());
     }
 

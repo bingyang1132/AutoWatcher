@@ -22,8 +22,61 @@ namespace AutoWatcher;
 /// <c>CardChoiceMirrors</c>）不走这里，走 <see cref="AdapterSelfCheck"/>：缺了就干净地拒绝
 /// 加载并说明原因，而不是装上一半。
 /// </remarks>
+/// <summary>一个可选入口的探测结果。</summary>
+/// <remarks>
+/// 分这几档是有代价换来的。原来只有「绑上／没绑上」两态，没绑上一律说成
+/// 「求解器没有这个入口」，于是两件完全不同的事长得一模一样：
+/// <b>上游还没做</b>（跳过是预期行为），和<b>上游改了签名、我们过期了</b>（是 bug）。
+/// 2026-09-15 就栽在这上面：求解器 0.38.3 给 <c>GrowthSourceMirrors.Register</c> 末尾加了
+/// 一个可选参数，我们写死 4 参的探测静默失效，勤学精进与许愿的成长额度悄悄没了两天，
+/// 而加载日志只是平静地说了句「求解器没有这个入口」——连我自己都被这句话骗过一次。
+/// </remarks>
+internal enum SolverEntryState
+{
+    /// <summary>绑上了。</summary>
+    Bound,
+
+    /// <summary>类型或成员在求解器里根本不存在。上游还没做，跳过是预期行为。</summary>
+    Absent,
+
+    /// <summary>成员在，形状和我们认的对不上。<b>大概率是适配层过期</b>，要去看上游改了什么。</summary>
+    Mismatched,
+
+    /// <summary>探测本身抛了异常。</summary>
+    Faulted,
+}
+
 internal static class SolverCompat
 {
+    private static readonly Dictionary<string, SolverEntryState> EntryStates = new(StringComparer.Ordinal);
+
+    /// <summary>记下一次探测的结果，原样返回绑定值，方便写在 return 上。</summary>
+    private static T? Record<T>(string entry, SolverEntryState state, T? value)
+        where T : class
+    {
+        EntryStates[entry] = state;
+        return value;
+    }
+
+    private static SolverEntryState StateOf(string entry)
+        => EntryStates.TryGetValue(entry, out SolverEntryState state) ? state : SolverEntryState.Absent;
+
+    /// <summary>
+    /// 一个入口在加载日志里怎么写。<b>「上游没有」和「签名对不上」必须分开</b>，
+    /// 后者是我们的 bug，不能和前者共用一句话。
+    /// </summary>
+    /// <param name="label">中文名，例如「局外成长来源登记」。</param>
+    /// <param name="absent">上游没有这个入口时的后果说明。</param>
+    private static string Describe(string entry, string label, string absent)
+        => StateOf(entry) switch
+        {
+            SolverEntryState.Bound => $"{label}：已绑定",
+            SolverEntryState.Absent => $"{label}：求解器没有这个入口，{absent}",
+            SolverEntryState.Mismatched =>
+                $"{label}：求解器有这个入口但签名对不上，**适配层需要更新**，暂时{absent}",
+            _ => $"{label}：探测出错，**这是适配层的缺陷**，暂时{absent}",
+        };
+
     /// <summary>
     /// 记一笔"这一类跨战斗收益已经兑现"。只有玩家打开"强制兑现跨战斗收益"时才有消费者，
     /// 而整个特性只存在于开发版求解器上。绑不上就是没有那个开关，不影响收益本身的计价。
@@ -75,19 +128,42 @@ internal static class SolverCompat
     public static readonly Action<Type, double>? RegisterCardRemovalOffset = BindCardRemovalOffset();
 
     /// <summary>绑定的结果，写进加载日志，方便一眼看出装的是哪种求解器。</summary>
-    public static string Summary =>
-        (RecordFatalKillGoal is null
-            ? "跨战斗收益目标：求解器没有这个入口，已跳过"
-            : "跨战斗收益目标：已绑定")
-        + (RegisterPowerHiddenState is null
-            ? "。Power 隐藏状态进指纹：求解器没有这个入口，光辉与天人形态改记风险"
-            : "。Power 隐藏状态进指纹：已绑定")
-        + (GrowthSourceRegister is null
-            ? "。局外成长来源登记：求解器没有这个入口，勤学精进与许愿的金币只走长期资源刻度"
-            : "。局外成长来源登记：已绑定")
-        + (RegisterCardRemovalOffset is null
-            ? "。移除估值偏置：求解器没有这个入口，净化不会优先烧打击防御"
-            : "。移除估值偏置：已绑定");
+    /// <remarks>
+    /// 每一项都区分「上游没有」和「签名对不上」——见 <see cref="SolverEntryState"/>。
+    /// 后者会另外单独 Warn 一次，因为那是需要有人去改代码的事，不该只躺在一行说明里。
+    /// </remarks>
+    public static string Summary => string.Join("。", [
+        Describe(LongTermGoalEntry, "跨战斗收益目标", "已跳过"),
+        Describe(HiddenStateEntry, "Power 隐藏状态进指纹", "光辉与天人形态改记风险"),
+        Describe(GrowthSourceEntry, "局外成长来源登记", "勤学精进与许愿的金币只走长期资源刻度"),
+        Describe(CardRemovalEntry, "移除估值偏置", "净化不会优先烧打击防御"),
+    ]);
+
+    /// <summary>
+    /// 把「签名对不上」和「探测出错」单独喊一次。加载日志里那一行说明太容易被当成常态读过去。
+    /// </summary>
+    public static void WarnOnStaleEntries()
+    {
+        foreach ((string entry, SolverEntryState state) in EntryStates)
+        {
+            if (state is SolverEntryState.Mismatched)
+            {
+                EngineDiagnostics.Warn(
+                    $"[AutoWatcher] {entry} 在求解器里存在，但签名和适配层认的对不上——"
+                    + "这一项已按「没有」处理，对应功能不生效。适配层需要跟上上游的改动。");
+            }
+            else if (state is SolverEntryState.Faulted)
+            {
+                EngineDiagnostics.Warn(
+                    $"[AutoWatcher] {entry} 的探测抛了异常，已按「没有」处理，对应功能不生效。");
+            }
+        }
+    }
+
+    private const string LongTermGoalEntry = "SimulatedCombatState.RecordLongTermGoal";
+    private const string HiddenStateEntry = "PowerHiddenStateMirrors.Register";
+    private const string GrowthSourceEntry = "GrowthSourceMirrors.Register";
+    private const string CardRemovalEntry = "CardRemovalValueMirrors.Register";
 
     /// <summary>
     /// 登记一个第三方局外成长来源，返回"记一次收益到手"的委托。求解器没有这个入口时返回
@@ -164,7 +240,7 @@ internal static class SolverCompat
                 .GetType("CombatSolver.GrowthSourceMirrors", throwOnError: false)
                 ?.GetMethod("Register", BindingFlags.Public | BindingFlags.Static);
             if (register is null)
-                return null;
+                return Record<MethodInfo>(GrowthSourceEntry, SolverEntryState.Absent, null);
             ParameterInfo[] parameters = register.GetParameters();
             if (parameters.Length < 4
                 || parameters[0].ParameterType != typeof(string)
@@ -172,20 +248,20 @@ internal static class SolverCompat
                 || parameters[2].ParameterType != typeof(Func<CardModel, bool>)
                 || parameters[3].ParameterType != typeof(Func<CardModel, string>))
             {
-                return null;
+                return Record<MethodInfo>(GrowthSourceEntry, SolverEntryState.Mismatched, null);
             }
             // 多出来的必须都是可选的，否则我们补的 null 不一定是它想要的默认值。
             for (int index = 4; index < parameters.Length; index++)
             {
                 if (!parameters[index].IsOptional)
-                    return null;
+                    return Record<MethodInfo>(GrowthSourceEntry, SolverEntryState.Mismatched, null);
             }
-            return register;
+            return Record(GrowthSourceEntry, SolverEntryState.Bound, register);
         }
         catch (Exception ex)
         {
             EngineDiagnostics.Warn($"[AutoWatcher] 没能绑上 GrowthSourceMirrors.Register：{ex.Message}");
-            return null;
+            return Record<MethodInfo>(GrowthSourceEntry, SolverEntryState.Faulted, null);
         }
     }
 
@@ -198,20 +274,21 @@ internal static class SolverCompat
             MethodInfo? generic = typeof(SimulatedCombatState).Assembly
                 .GetType("CombatSolver.CardRemovalValueMirrors", throwOnError: false)
                 ?.GetMethod("Register", BindingFlags.Public | BindingFlags.Static);
-            if (generic is null
-                || !generic.IsGenericMethodDefinition
+            if (generic is null)
+                return Record<Action<Type, double>>(CardRemovalEntry, SolverEntryState.Absent, null);
+            if (!generic.IsGenericMethodDefinition
                 || generic.GetParameters() is not [{ ParameterType: { } parameter }]
                 || parameter != typeof(double))
             {
-                return null;
+                return Record<Action<Type, double>>(CardRemovalEntry, SolverEntryState.Mismatched, null);
             }
-            return (cardType, offset) =>
-                generic.MakeGenericMethod(cardType).Invoke(null, [offset]);
+            return Record<Action<Type, double>>(CardRemovalEntry, SolverEntryState.Bound,
+                (cardType, offset) => generic.MakeGenericMethod(cardType).Invoke(null, [offset]));
         }
         catch (Exception ex)
         {
             EngineDiagnostics.Warn($"[AutoWatcher] 没能绑上 CardRemovalValueMirrors.Register：{ex.Message}");
-            return null;
+            return Record<Action<Type, double>>(CardRemovalEntry, SolverEntryState.Faulted, null);
         }
     }
 
@@ -235,8 +312,17 @@ internal static class SolverCompat
         {
             MethodInfo? generic = HiddenStateMirrors()?.GetMethod(
                 name, BindingFlags.Public | BindingFlags.Static);
-            if (generic is null || !generic.IsGenericMethodDefinition)
-                return null;
+            if (generic is null)
+            {
+                return Record<Action<Type, string, Func<CombatPredictionSimulator, PowerModel, long>>>(
+                    HiddenStateEntry, SolverEntryState.Absent, null);
+            }
+            if (!generic.IsGenericMethodDefinition)
+            {
+                return Record<Action<Type, string, Func<CombatPredictionSimulator, PowerModel, long>>>(
+                    HiddenStateEntry, SolverEntryState.Mismatched, null);
+            }
+            EntryStates[HiddenStateEntry] = SolverEntryState.Bound;
             return (powerType, stateName, read) =>
             {
                 Type funcType = typeof(Func<,,>).MakeGenericType(
@@ -258,7 +344,8 @@ internal static class SolverCompat
         catch (Exception ex)
         {
             EngineDiagnostics.Warn($"[AutoWatcher] 没能绑上 PowerHiddenStateMirrors.{name}：{ex.Message}");
-            return null;
+            return Record<Action<Type, string, Func<CombatPredictionSimulator, PowerModel, long>>>(
+                HiddenStateEntry, SolverEntryState.Faulted, null);
         }
     }
 
@@ -312,33 +399,40 @@ internal static class SolverCompat
     {
         try
         {
+            string entry = $"SimulatedCombatState.{name}";
             Type? goals = typeof(SimulatedCombatState).Assembly
                 .GetType("CombatSolver.LongTermGoals", throwOnError: false);
-            if (goals is null || !goals.IsEnum)
-                return null;
+            // 这个枚举在上游从来没有存在过（翻遍全部提交历史），所以「没有」是常态，不是回归。
+            if (goals is null)
+                return Record<Action<SimulatedCombatState>>(entry, SolverEntryState.Absent, null);
+            if (!goals.IsEnum)
+                return Record<Action<SimulatedCombatState>>(entry, SolverEntryState.Mismatched, null);
             object? fatalKill = Enum.GetNames(goals).Contains("FatalKillBonus")
                 ? Enum.Parse(goals, "FatalKillBonus")
                 : null;
             if (fatalKill is null)
-                return null;
+                return Record<Action<SimulatedCombatState>>(entry, SolverEntryState.Mismatched, null);
             MethodInfo? method = typeof(SimulatedCombatState).GetMethod(
                 name,
                 BindingFlags.Public | BindingFlags.Instance,
                 binder: null,
                 types: [goals],
                 modifiers: null);
+            // 枚举在、方法不在：上游动过这一块，不是「从来没做」。
             if (method is null)
-                return null;
+                return Record<Action<SimulatedCombatState>>(entry, SolverEntryState.Mismatched, null);
             ParameterExpression combat = Expression.Parameter(typeof(SimulatedCombatState), "combat");
-            return Expression.Lambda<Action<SimulatedCombatState>>(
-                Expression.Call(combat, method, Expression.Constant(fatalKill, goals)),
-                combat).Compile();
+            return Record<Action<SimulatedCombatState>>(entry, SolverEntryState.Bound,
+                Expression.Lambda<Action<SimulatedCombatState>>(
+                    Expression.Call(combat, method, Expression.Constant(fatalKill, goals)),
+                    combat).Compile());
         }
         catch (Exception ex)
         {
             // 绑不上不是错误，但要留痕：否则"开关对某张牌不起作用"会变成没人能解释的现象。
             EngineDiagnostics.Warn($"[AutoWatcher] 没能绑上 SimulatedCombatState.{name}：{ex.Message}");
-            return null;
+            return Record<Action<SimulatedCombatState>>(
+                $"SimulatedCombatState.{name}", SolverEntryState.Faulted, null);
         }
     }
 }

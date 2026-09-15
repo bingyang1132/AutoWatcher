@@ -47,6 +47,10 @@
 
 ---
 
+[h2]★ 1.0.5 更新公告：修复勤学精进与许愿的成长额度[/h2]
+
+此前在求解器 0.38.3 及更高版本上，勤学精进的永久升级和许愿的金币拿不到自己的成长额度，求解器因此不会为这两张牌调整路线。现已修复。最低求解器版本不变，仍是 0.38.2 或更高（工坊版满足要求）。
+
 [h2]★ 1.0.4 更新公告：修复斋戒问题[/h2]
 
 此前斋戒因为求解器端没有接口，每回合都需要重算，体验很差。现已修复。也因此，本版需要求解器 0.38.2 或更高（工坊版满足要求）。
@@ -127,6 +131,10 @@
 ## 正文 · English
 
 ---
+
+[h2]★ 1.0.5 announcement: Lesson Learned and Wish growth budgets fixed[/h2]
+
+On solver 0.38.3 and newer, the permanent upgrade from Lesson Learned and Wish's gold stopped receiving their own growth budgets, so the solver would not adjust a route for either card. This is now fixed. The minimum solver version is unchanged at 0.38.2 or newer (the Workshop build qualifies).
 
 [h2]★ 1.0.4 announcement: Fasting fixed[/h2]
 
