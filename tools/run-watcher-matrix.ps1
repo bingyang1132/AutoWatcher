@@ -427,15 +427,30 @@ $cases = @(
             "-ExpectedInitialExecutableActionCountAtLeast", "2"
         )
     },    @{
-        # 回归锁，不是算术判别。3 这个数是对已验证的构建实测出来的，
-        # 不是推导出来的。姿态或伤害倍率的建模一旦变化，这个回合数就会变。
+        # 回归锁，不是算术判别。回合数是对已验证的构建实测出来的，不是推导出来的。
+        #
+        # **2026-09-14 重新标定过，原来锁的量是错的。** 原来写的是「100 血、三回合结束」。
+        # 在求解器 0.38.6 上这条挂了，量到四回合。查下来不是镜像坏了：
+        #
+        #   1. -EnemyCurrentHp 是 Math.Min(值, 敌人最大生命)，而这个遭遇是单只 55~57 血的
+        #      毛毛虫。写 100 和写 60 是同一场战斗，那个 100 从来没生效过。
+        #   2. 真正的原因是**求解器优化的是掉血，不是回合数**。毛毛虫的出招是
+        #      酸液 → 吸气(自己 +7 力量) → 酸液，而观者在愤怒姿态下受到的伤害也翻倍；
+        #      加力之后那一下 11 点、在愤怒里就是 22。所以求解器宁可多花一回合退出愤怒来省血：
+        #      实测四回合那条掉 4 血，两回合那条掉 8 血。
+        #   3. 逐敌血量扫过一遍：30→2 回合、45→2、50→2、51→2、53→4、55→4。
+        #      **2 直接跳到 4，中间没有 3。** 原来那个 3 是在别的建模下测出来的，现在无法复现。
+        #
+        # 所以断言换成钉在两回合那个平台的中间：用 -InitialEnemyCurrentHpsJson 显式给 45，
+        # 下边够不到一回合、上边离 51 那个坎还有 6 点余量。伤害建模崩掉仍然会被抓到，
+        # 但不会再被「掉血与速度的取舍」的微调带翻。
         Id = "WATCHER-STANCE-REGRESSION-LOCK"
         Tags = @("smoke", "stance", "damage")
-        Why = "爆发加打击循环打 100 血，投影三回合结束。实测值，用来锁住姿态与伤害倍率的建模。"
+        Why = "爆发加打击打 45 血，两回合结束。实测值，锁姿态与伤害倍率的建模。"
         Args = @(
-            "-EnemyCurrentHp", "100", "-ClearPlayerPiles",
+            "-InitialEnemyCurrentHpsJson", "[45]", "-ClearPlayerPiles",
             "-CardsJson", (Hand @("WATCHER_ERUPTION_P", "WATCHER_STRIKE_P")),
-            "-ExpectedInitialCombatEndedTurn", "3",
+            "-ExpectedInitialCombatEndedTurn", "2",
             "-ExpectedInitialFinalEnemyHpAtMost", "0",
             "-ExpectedInitialUnmirroredCount", "0"
         )
