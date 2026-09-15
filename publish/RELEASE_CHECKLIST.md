@@ -234,3 +234,28 @@
       附 `AutoWatcher-1.0.3.zip`，说明用的是 [publish/RELEASE_NOTES_1.0.3.md](RELEASE_NOTES_1.0.3.md)。
 - [x] 上传创意工坊 `3797303841`（2026-09-12）。中英两份标题描述都传了，三个依赖没动。
 - [x] 这一版仍然没有原版角色的回归证据，release 说明里如实写了。
+
+## 1.0.4（2026-09-14）
+
+前置条件终于齐了：上游 2026-09-14 合并 PR #88 并随求解器 `0.38.2` 发版，
+`AfterEnergyResetMirrors` 进了发布产物。上面那条「等上游」就此划掉。
+
+- [x] 合并 `local/energy-reset-registry` 进 `main`：登记 `EnergyDownPower`（斋戒），
+      天人形态 `DevaPower` 从 Harmony 补丁改成登记。
+- [x] `PinnedTargets.CombatSolverMinimumVersion` 与清单里的 `CombatSolver.min_version`
+      从 `0.32.0` 抬到 `0.38.2`。**这是硬依赖**：低于它连 `AfterEnergyResetMirrors`
+      这个类型都找不到，适配层会干净地拒绝加载。
+- [x] 抬门槛前先确认工坊那份求解器跟得上：工坊 `3790899961` 的更新记录里 `0.38.2` 是
+      09-13 上的，现在已经是 `0.38.6`。所以订阅用户不会被挡在外面。
+      （1.0.3 那轮没抬门槛，理由正是当时工坊还停在 `0.32.0`。这一步每次都要重新查。）
+- [x] 已知缺口从 2 处减到 1 处，`README.md` / `docs/VERIFICATION.md` /
+      `publish/steam-description.md`（中英两份）都改了，`workshop.json` 重新生成。
+- [x] 全量矩阵 34 条：**33 通过、1 未通过**。未通过的是
+      `WATCHER-STANCE-REGRESSION-LOCK`（预期三回合结束，实测四回合）。
+      判定为可发：它锁的是求解器的路线选择不是我们的镜像正确性，锁姿态倍率的算术用例全过、
+      未镜像项全 0，而且本版只动斋戒和天人形态、这条用例两样都不沾边。回归窗口在求解器
+      `0.36.4` 到 `0.38.6` 之间——上一次全量矩阵是在 `0.36.3` 上跑的。release 说明里如实写了。
+- [x] 上传创意工坊 `3797303841`（2026-09-14）。中英两份标题描述都传了，三个依赖没动。
+- [x] tag `v1.0.4` 已推。
+- [ ] **GitHub release 还没建**：`gh release create` 被本地权限策略拦下了，要用户自己跑一次。
+      命令和产物见会话记录，产物是 `AutoWatcher-1.0.4.zip`（DLL + 清单 + 第三方声明）。
