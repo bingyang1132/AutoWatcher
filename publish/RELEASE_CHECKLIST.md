@@ -289,6 +289,11 @@
 - [x] `publish/steam-description.md` 中英两份都加了 1.0.5 更新公告，`workshop.json` 重新生成，
       `changeNote` 用 BBCode（1.0.4 那次写成 markdown 星号的坑没再踩）。
 - [x] `docs/VERIFICATION.md` 记下这次静默回归的形状，以及「矩阵为什么抓不到」。
+- [x] 上传创意工坊 `3797303841`（2026-09-15 02:14）。中英两份标题描述都传了，三个依赖没动。
+- [x] tag `v1.0.5` 已推；GitHub release
+      [`v1.0.5`](https://github.com/bingyang1132/AutoWatcher/releases/tag/v1.0.5) 已建，
+      附 `AutoWatcher-1.0.5.zip`（DLL + 清单 + 第三方声明）。
+      （这次 `gh release create` 没被拦，1.0.4 那次被拦过——不稳定，下次仍要准备好交给用户。）
 - [ ] **没有运行时回归证据。** RitsuLib `0.6.0` 换布局之后无头 harness 自己也找不到 RitsuLib
       （`tools/run-unattended-test.ps1` 按 `lib/<游戏API版本>/` 取，而且只搬一个 DLL，新版拆成了
       多个），`WATCHER-LESSON-LEARNED-FATAL-KILL` 在 harness 阶段就起不来。这一版的证据只有
