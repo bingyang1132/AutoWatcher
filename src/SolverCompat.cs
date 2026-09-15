@@ -115,7 +115,14 @@ internal static class SolverCompat
             return null;
         try
         {
-            object? handle = GrowthSourceRegister.Invoke(null, [id, card, hasTarget, title]);
+            // 参数个数按实际签名填。求解器 0.38.3 起在末尾多了一个可选的 opportunityTarget，
+            // 我们不用它，补 null 走默认；固定传 4 个会抛 TargetParameterCountException。
+            object?[] arguments = new object?[GrowthSourceRegister.GetParameters().Length];
+            arguments[0] = id;
+            arguments[1] = card;
+            arguments[2] = hasTarget;
+            arguments[3] = title;
+            object? handle = GrowthSourceRegister.Invoke(null, arguments);
             if (handle is null)
                 return null;
             MethodInfo? record = typeof(SimulatedCombatState).GetMethod(
@@ -139,6 +146,16 @@ internal static class SolverCompat
     }
 
     /// <summary>找 <c>GrowthSourceMirrors.Register</c>；签名对不上就当没有。</summary>
+    /// <remarks>
+    /// <para><b>参数个数别写死。</b>这里原来要求正好 4 个参数。求解器 0.38.3
+    /// （「stop search at proven growth targets」）在末尾加了第 5 个可选参数
+    /// <c>opportunityTarget</c>，于是这个入口从那一版起**静默地绑不上了**——
+    /// 加载日志只剩一句「求解器没有这个入口」，勤学精进和许愿的金币退回长期资源刻度，
+    /// 两张牌再也拿不到自己的成长额度。没有报错，没有异常，只有一行看起来一直都在的说明。</para>
+    ///
+    /// <para>所以只认前 4 个参数的形状，后面多出来的可选参数一律容忍：那是上游加功能的正常方式，
+    /// 不该被读成「入口没了」。真正对不上的是前 4 个的类型，那才算没有。</para>
+    /// </remarks>
     private static MethodInfo? BindGrowthSourceRegister()
     {
         try
@@ -146,7 +163,24 @@ internal static class SolverCompat
             MethodInfo? register = typeof(SimulatedCombatState).Assembly
                 .GetType("CombatSolver.GrowthSourceMirrors", throwOnError: false)
                 ?.GetMethod("Register", BindingFlags.Public | BindingFlags.Static);
-            return register?.GetParameters().Length == 4 ? register : null;
+            if (register is null)
+                return null;
+            ParameterInfo[] parameters = register.GetParameters();
+            if (parameters.Length < 4
+                || parameters[0].ParameterType != typeof(string)
+                || parameters[1].ParameterType != typeof(Func<CardModel>)
+                || parameters[2].ParameterType != typeof(Func<CardModel, bool>)
+                || parameters[3].ParameterType != typeof(Func<CardModel, string>))
+            {
+                return null;
+            }
+            // 多出来的必须都是可选的，否则我们补的 null 不一定是它想要的默认值。
+            for (int index = 4; index < parameters.Length; index++)
+            {
+                if (!parameters[index].IsOptional)
+                    return null;
+            }
+            return register;
         }
         catch (Exception ex)
         {

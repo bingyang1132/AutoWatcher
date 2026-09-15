@@ -17,7 +17,14 @@
     <Sts2Dir Condition="'$(Sts2Dir)' == ''">$(SteamRoot)/steamapps/common/Slay the Spire 2</Sts2Dir>
     <Sts2DataDir Condition="'$(Sts2DataDir)' == '' and '$(OS)' == 'Windows_NT'">$(Sts2Dir)/data_sts2_windows_x86_64</Sts2DataDir>
     <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Dir)/data_sts2_linuxbsd_x86_64</Sts2DataDir>
-    <RitsuLibDir Condition="'$(RitsuLibDir)' == ''">$(SteamRoot)/steamapps/workshop/content/2868840/3747602295/lib/0.111.0</RitsuLibDir>
+    <!-- RitsuLib 0.6.0 换了目录布局：lib/<游戏API版本>/ 一个大 DLL → compat/<版本>/ 加 shared/，
+         并自带 RitsuLib.References.props。有那个文件就走它，没有就按旧布局引用。 -->
+    <RitsuLibRoot Condition="'$(RitsuLibRoot)' == ''">$(SteamRoot)/steamapps/workshop/content/2868840/3747602295</RitsuLibRoot>
+    <RitsuLibGameApiVersion Condition="'$(RitsuLibGameApiVersion)' == ''">0.111.0</RitsuLibGameApiVersion>
+    <RitsuLibReferenceProps>$(RitsuLibRoot)/RitsuLib.References.props</RitsuLibReferenceProps>
+    <RitsuLibSplitBundle Condition="Exists('$(RitsuLibReferenceProps)')">true</RitsuLibSplitBundle>
+    <RitsuLibReferenceTarget Condition="'$(RitsuLibSplitBundle)' == 'true' and '$(RitsuLibReferenceTarget)' == ''">$(RitsuLibGameApiVersion)</RitsuLibReferenceTarget>
+    <RitsuLibDir Condition="'$(RitsuLibDir)' == ''">$(RitsuLibRoot)/lib/$(RitsuLibGameApiVersion)</RitsuLibDir>
 
     <!-- 钉死的依赖。两者都从游戏 mods 目录读，不把别人的二进制放进本仓库。 -->
     <CombatSolverDir Condition="'$(CombatSolverDir)' == ''">$(Sts2Dir)/mods/CombatSolver</CombatSolverDir>
@@ -37,18 +44,23 @@
     <Publicize Include="Watcher" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false" />
   </ItemGroup>
 
+  <Import Project="$(RitsuLibReferenceProps)" Condition="'$(RitsuLibSplitBundle)' == 'true'" />
+
   <ItemGroup>
     <Reference Include="sts2" HintPath="$(Sts2DataDir)/sts2.dll" Private="false" />
     <Reference Include="0Harmony" HintPath="$(Sts2DataDir)/0Harmony.dll" Private="false" />
     <Reference Include="GodotSharp" HintPath="$(Sts2DataDir)/GodotSharp.dll" Private="false" />
-    <Reference Include="STS2-RitsuLib" HintPath="$(RitsuLibDir)/STS2-RitsuLib.dll" Private="false" />
     <Reference Include="CombatSolver" HintPath="$(CombatSolverDir)/CombatSolver.dll" Private="false" />
     <Reference Include="Watcher" HintPath="$(WatcherDir)/Watcher.dll" Private="false" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(RitsuLibSplitBundle)' != 'true'">
+    <Reference Include="STS2-RitsuLib" HintPath="$(RitsuLibDir)/STS2-RitsuLib.dll" Private="false" />
+  </ItemGroup>
+
   <Target Name="ValidatePinnedDependencies" BeforeTargets="ResolveAssemblyReferences">
     <Error Condition="!Exists('$(Sts2DataDir)/sts2.dll')" Text="找不到 $(Sts2DataDir)/sts2.dll。请检查 SteamRoot 或 local.props。" />
-    <Error Condition="!Exists('$(RitsuLibDir)/STS2-RitsuLib.dll')" Text="找不到当前游戏版本的 RitsuLib。请检查 SteamRoot 或 local.props。" />
+    <Error Condition="'$(RitsuLibSplitBundle)' != 'true' and !Exists('$(RitsuLibDir)/STS2-RitsuLib.dll')" Text="找不到当前游戏版本的 RitsuLib。请检查 SteamRoot 或 local.props。" />
     <Error Condition="!Exists('$(CombatSolverDir)/CombatSolver.dll')" Text="找不到 $(CombatSolverDir)/CombatSolver.dll。请先构建并部署 CombatSolver。" />
     <Error Condition="!Exists('$(WatcherDir)/Watcher.dll')" Text="找不到 $(WatcherDir)/Watcher.dll。请把钉死的观者 mod 复制到游戏 mods 目录。" />
   </Target>
