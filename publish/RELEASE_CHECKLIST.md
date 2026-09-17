@@ -323,6 +323,8 @@
 - [x] 上传工作区 `ModUploader-win-x64/AutoWatcherWorkshop/` 换成 1.0.6 的 Release 构建。
 - [x] 上传创意工坊 `3797303841`（2026-09-16 23:3x）。中英两份标题描述都传了，三个依赖没动。
       日志里 `k_EItemUpdateStatusInvalid` 照例是完成态，不是错误。
-- [ ] tag `v1.0.6` 与 GitHub release（`gh release create` 会被本地权限策略拦，作者自己跑）。
+- [x] tag `v1.0.6` 已推；GitHub release
+      [`v1.0.6`](https://github.com/bingyang1132/AutoWatcher/releases/tag/v1.0.6) 已建，
+      附 `AutoWatcher-1.0.6.zip`（DLL + 清单 + 第三方声明）。这次 `gh release create` 没被拦。
 - [ ] **全量 34 条没有重跑。** 这一版只动一个新补丁点和预见的公共前几步，其余夹具不沾边；
       要保险可以补跑一轮。
