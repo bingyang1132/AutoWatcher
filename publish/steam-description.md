@@ -47,6 +47,10 @@
 
 ---
 
+[h2]★ 1.0.6 更新公告：修复先见之明卡住的问题[/h2]
+
+此前开着先见之明时，每个回合开始都会弹出一次预见的选牌页面，而自动化的路线里没有这一步，于是停在那里不动，只能自己手操。现已修复：回合开始的预见变成求解器自己搜的分支，丢哪几张由它决定。最低求解器版本不变，仍是 0.38.2 或更高（工坊版满足要求）。
+
 [h2]★ 1.0.5 更新公告：修复勤学精进与许愿的成长额度[/h2]
 
 此前在求解器 0.38.3 及更高版本上，勤学精进的永久升级和许愿的金币拿不到自己的成长额度，求解器因此不会为这两张牌调整路线。现已修复。最低求解器版本不变，仍是 0.38.2 或更高（工坊版满足要求）。
@@ -97,10 +101,11 @@
 
 [h2]已知缺口[/h2]
 
-有 1 处：
+有 2 处：
 
 [list]
 [*][b]画符[/b]（mod 自加的先古卡，强度很低）的批量临时附魔。它[b]不会静默算错[/b] —— 求解器会在路线上打出红字标明「这里有未镜像的效果」。
+[*][b]手牌满的时候打冥想[/b]：溢出的那张牌实机会先进弃牌堆、下个回合开始再塞回手里，预测里它就留在弃牌堆。手牌不满时两边一致。碰上了的表现是那一场反复重算。
 [/list]
 
 另有一批走 Harmony postfix 或求解器不分发的钩子也没有覆盖。
@@ -131,6 +136,10 @@
 ## 正文 · English
 
 ---
+
+[h2]★ 1.0.6 announcement: Foresight no longer stalls the game[/h2]
+
+With Foresight up, the start of every turn popped a Scry selection screen that the automated route did not contain, so the game just sat there and you had to play by hand. Fixed: turn-start Scry is now a branch the solver searches itself, and it decides which cards to discard. The minimum solver version is unchanged at 0.38.2 or newer (the Workshop build qualifies).
 
 [h2]★ 1.0.5 announcement: Lesson Learned and Wish growth budgets fixed[/h2]
 
@@ -188,11 +197,12 @@ count toward long-term value
 
 [h2]Known gaps[/h2]
 
-One of them:
+Two of them:
 
 [list]
 [*][b]Draw Talisman[/b] (a weak Ancient card the mod adds itself) and its bulk temporary enchantment.
 It [b]never silently miscalculates[/b] — the solver marks the route in red with "unmirrored effect here".
+[*][b]Meditate played with a full hand[/b]: the overflowing card really goes to the discard pile and comes back to your hand at the start of the next turn, while prediction leaves it in the discard pile. With room in hand the two agree. When it happens, that fight recomputes over and over.
 [/list]
 
 A further set of hooks that run through Harmony postfixes, or that the solver does not dispatch,

@@ -707,6 +707,24 @@ $cases = @(
             "-ExpectedInitialCombatEndedTurn", "3",
             "-ExpectedInitialUnmirroredCount", "0"
         )
+    },
+    @{
+        # 先见之明：每回合开始预见 N。观者把它挂在 BeforeHandDraw 上，求解器那一步是写死的
+        # 流程、没有注册表，漏了连风险都不记 —— 实机每个回合开始都弹一次预见选牌页面，而路线
+        # 里没有这一步，自动化就停在那里等人选。玩家报的「开了先见之明就卡死」。
+        #
+        # 判据是「首轮路线里至少评估过一条选牌分支」：牌组里只有打击，没有任何别的选牌来源，
+        # 所以那条分支只能来自第 2 回合开始的预见。不镜像的话这个数是 0。
+        Id = "WATCHER-FORESIGHT-TURN-START-SCRY"
+        Tags = @("powers", "draw")
+        Why = "先见之明每回合开始预见；不镜像实机就弹选牌页面，自动化停在那里。"
+        Args = @(
+            "-EnemyCurrentHp", "60", "-ClearPlayerPiles", "-InitialPlayerEnergy", "3",
+            "-PowerId", "ForesightPower", "-PowerAmount", "3", "-PowerTarget", "Player",
+            "-CardsJson", '[{"cardId":"WATCHER_STRIKE_P","pile":"Hand","count":3},{"cardId":"WATCHER_STRIKE_P","pile":"Draw","count":8}]',
+            "-ExpectedInitialChoiceBranchesEvaluatedAtLeast", "1",
+            "-ExpectedInitialUnmirroredCount", "0"
+        )
     }
 )
 

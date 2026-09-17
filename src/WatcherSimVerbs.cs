@@ -200,38 +200,8 @@ internal static class WatcherSimVerbs
     /// </param>
     public static void Scry(WatcherSim sim, int amount, string source, int? maxBranches = null)
     {
-        if (amount <= 0)
+        if (!PrepareScry(sim, amount, out PredictedCard[] looked))
             return;
-
-        // 抽牌堆空了先洗一次，照 CardPileCmd.ShuffleIfNecessary：抽牌堆空且弃牌堆非空才洗。
-        // 观者 0.9.28 的两个预见入口都在取牌之前做这件事，以前这里直接返回，于是实机把弃牌堆
-        // 洗回去、弹出选牌页面的时候，路线上根本没有这一步。
-        // 递归有界：洗完抽牌堆就不空了，美琅脂在洗牌后触发的那次预见不会再洗第二遍。
-        if (sim.OwnerState.DrawPile.Cards.Count == 0 && sim.OwnerState.DiscardPile.Cards.Count > 0)
-            sim.Simulator.Shuffle(sim.Owner);
-
-        // 洗完还是空，或者有效张数被守视减到零：原版在这两种情况下都**不结算 OnScry**，
-        // 直接返回。涅槃的格挡和迂回回手必须放在这道门后面。
-        if (sim.OwnerState.DrawPile.Cards.Count == 0)
-            return;
-
-        int effective = EffectiveScryAmount(sim, amount);
-        PredictedCard[] looked = sim.OwnerState.DrawPile.Cards.Take(effective).ToArray();
-        if (looked.Length == 0)
-            return;
-
-        if (PowerAmount<NirvanaPower>(sim) is > 0 and var nirvana)
-            BlockFor(sim, nirvana, ValueProp.Unpowered);
-
-        // 按类型认，不按 id 字符串。观者 0.9.27 这里写的是 `Id.Entry == "WEAVE"`，而迂回的
-        // 真实 id 是 `WATCHER_WEAVE`，所以那一版实机根本没把迂回收回来；0.9.28 改成了
-        // `card is WatcherWeave`。我们一直按 `WATCHER_WEAVE` 匹配，也就是一直在照“本该如此”
-        // 的行为算——0.9.27 上偏乐观，0.9.28 起才对得上。改成类型判据与上游同源。
-        PredictedCard[] weaves = sim.OwnerState.DiscardPile.Cards
-            .Where(card => card.Preview is WatcherWeave)
-            .ToArray();
-        if (weaves.Length > 0)
-            sim.Simulator.AddToPile(weaves, PileType.Hand);
 
         if (sim.Combat is not ICombatPredictionChoiceSink choices)
         {
@@ -246,5 +216,78 @@ internal static class WatcherSimVerbs
             PileType.Draw,
             looked,
             maxBranches);
+    }
+
+    /// <summary>回合开始时的预见（先见之明）：走回合开始的选牌通道，不走出牌那条。</summary>
+    /// <remarks>
+    /// 两条通道不能混用。出牌那条（<c>ResolvePileDiscardChoice</c>）挂的是动作选择，只有在
+    /// 打牌的上下文里才会被消费；回合开始这一步的调用方是拿返回值当搜索边界的，必须走
+    /// <c>TurnStartChoiceSupport.ResolvePileDiscard</c> 并把「挂起了选择」原样报给调用方，
+    /// 否则实机弹出预见页面时路线里没有这一步，自动化就停在那里等一个永远不会来的答案。
+    ///
+    /// 返回 false 表示挂起了待处理选择，调用方要把自己的返回值也改成 true（有待处理选择）。
+    /// </remarks>
+    public static bool ScryAtTurnStart(
+        WatcherSim sim,
+        int amount,
+        TurnStartChoiceCursor? cursor,
+        string source)
+    {
+        if (!PrepareScry(sim, amount, out PredictedCard[] looked))
+            return true;
+        if (sim.Combat.HasPendingChoice)
+            return false;
+
+        return TurnStartChoiceSupport.ResolvePileDiscard(
+            sim.Simulator,
+            sim.Combat,
+            sim.Owner,
+            cursor,
+            source,
+            PileType.Draw,
+            looked);
+    }
+
+    /// <summary>预见挑牌之前的那几步：必要时洗牌、算有效张数、结算涅槃与迂回。</summary>
+    /// <remarks>
+    /// 出牌和回合开始两条通道共用这一段。以前只有出牌一条，两边各写一份迟早会漂。
+    /// </remarks>
+    private static bool PrepareScry(WatcherSim sim, int amount, out PredictedCard[] looked)
+    {
+        looked = [];
+        if (amount <= 0)
+            return false;
+
+        // 抽牌堆空了先洗一次，照 CardPileCmd.ShuffleIfNecessary：抽牌堆空且弃牌堆非空才洗。
+        // 观者 0.9.28 的两个预见入口都在取牌之前做这件事，以前这里直接返回，于是实机把弃牌堆
+        // 洗回去、弹出选牌页面的时候，路线上根本没有这一步。
+        // 递归有界：洗完抽牌堆就不空了，美琅脂在洗牌后触发的那次预见不会再洗第二遍。
+        if (sim.OwnerState.DrawPile.Cards.Count == 0 && sim.OwnerState.DiscardPile.Cards.Count > 0)
+            sim.Simulator.Shuffle(sim.Owner);
+
+        // 洗完还是空，或者有效张数被守视减到零：原版在这两种情况下都**不结算 OnScry**，
+        // 直接返回。涅槃的格挡和迂回回手必须放在这道门后面。
+        if (sim.OwnerState.DrawPile.Cards.Count == 0)
+            return false;
+
+        int effective = EffectiveScryAmount(sim, amount);
+        looked = sim.OwnerState.DrawPile.Cards.Take(effective).ToArray();
+        if (looked.Length == 0)
+            return false;
+
+        if (PowerAmount<NirvanaPower>(sim) is > 0 and var nirvana)
+            BlockFor(sim, nirvana, ValueProp.Unpowered);
+
+        // 按类型认，不按 id 字符串。观者 0.9.27 这里写的是 `Id.Entry == "WEAVE"`，而迂回的
+        // 真实 id 是 `WATCHER_WEAVE`，所以那一版实机根本没把迂回收回来；0.9.28 改成了
+        // `card is WatcherWeave`。我们一直按 `WATCHER_WEAVE` 匹配，也就是一直在照“本该如此”
+        // 的行为算——0.9.27 上偏乐观，0.9.28 起才对得上。改成类型判据与上游同源。
+        PredictedCard[] weaves = sim.OwnerState.DiscardPile.Cards
+            .Where(card => card.Preview is WatcherWeave)
+            .ToArray();
+        if (weaves.Length > 0)
+            sim.Simulator.AddToPile(weaves, PileType.Hand);
+
+        return true;
     }
 }

@@ -96,6 +96,10 @@ public static class Entry
         harmony.Patch(
             WatcherPowerTurnStartPatch.ResolveTarget(),
             postfix: new HarmonyMethod(typeof(WatcherPowerTurnStartPatch), nameof(WatcherPowerTurnStartPatch.Postfix)));
+        // 发牌之前：先见之明每回合开始预见，要挂进回合开始的选牌通道。
+        harmony.Patch(
+            WatcherHandDrawPatch.ResolveTarget(),
+            postfix: new HarmonyMethod(typeof(WatcherHandDrawPatch), nameof(WatcherHandDrawPatch.Postfix)));
         harmony.Patch(
             WatcherTurnStartPatch.ResolveTarget(),
             postfix: new HarmonyMethod(typeof(WatcherTurnStartPatch), nameof(WatcherTurnStartPatch.Postfix)));

@@ -815,3 +815,47 @@ cp "$APPDATA/SlayTheSpire2/steam/<steamid>/settings.save" \
 **CombatSolver 自己**的 DLL 和清单哈希，认不出适配层改没改。所以改了 mod 之后必须先
 `Stop-Process -Name SlayTheSpire2`，否则测的还是旧的加载状态。矩阵脚本开头会自动杀一次，
 每条用例也都用独立进程。
+
+## 先见之明：回合开始的预见没有镜像，实机会卡在选牌页面（1.0.6，2026-09-16）
+
+玩家报「开着先见之明就卡死，只能自己手操」。
+
+**根因。** 先见之明（`WATCHER_FORESIGHT` / `WIREHEADING`）挂的是 `ForesightPower`，它的效果写在
+`ForesightPower.BeforeHandDrawCompat` 里，由观者的 `WatcherBeforeHandDrawCompatPatch` 在原版
+`BeforeHandDraw` 的 postfix 里遍历钩子监听者调用。求解器这一步是
+`TurnStartPowerSupport.TriggerBeforeHandDraw` 里一段按类型写死的流程，**没有注册表，漏了连
+风险都不记**（和 `sts2-solver-thirdparty-entry-gaps` 里记的那批同一类）。
+
+后果不是算错，是卡住：预见要弹选牌页面，而部署下去的路线里没有这一步。实机每个回合开始都停在
+那个页面上等人选，自动化接不下去。没有红字，因为这个时点不记风险。
+
+**修法。** 新增 `src/WatcherHandDrawPatch.cs`，postfix 在同一个方法上，对玩家身上的
+`ForesightPower` 调预见。两件事必须做对：
+
+1. 走**回合开始的选牌通道** `TurnStartChoiceSupport.ResolvePileDiscard`，不能走打牌那条
+   `ICombatPredictionChoiceSink.ResolvePileDiscardChoice` —— 后者挂的是动作选择，只在出牌
+   上下文里被消费。
+2. 挂起了选择要把 `__result` 写成 `true`。这个方法的 `bool` 是「有没有产生待处理选择」，
+   调用方拿它当搜索边界；不回写，后面的遗物和噩梦结算会带着未决选择继续跑。
+
+预见挑牌之前的那几步（必要时洗牌、黄金眼与守视的增减、涅槃的格挡、弃牌堆里的迂回回手）抽成了
+`WatcherSimVerbs.PrepareScry`，出牌和回合开始两条通道共用，不再各写一份。
+
+**验收。** 新夹具 `WATCHER-FORESIGHT-TURN-START-SCRY`，矩阵 33 → **34** 条：玩家身上注 3 层
+先见之明，牌组里只有打击（没有任何别的选牌来源），断言首轮路线至少评估过 1 条选牌分支、
+未镜像项 0 条。反向对照（把注册那一段注掉重新构建）如期挂在
+「首轮选牌分支仅评估 0 条，低于下限 1」，恢复后重新通过。
+
+### 顺带查出来的一处新缺口：手牌满时打冥想
+
+同一个 `BeforeHandDraw` 钩子上还挂着 `WatcherStatePower.BeforeHandDrawCompat`，作用是把
+`_deferredRetainCards` 塞回手牌。填这个表的只有一处：`WatcherMeditate.OnPlay` 把牌加进手牌
+之后发现它没进手牌（手牌满了），就调 `WatcherCombatHelper.DeferRetainCard` 暂存起来。
+
+求解器的 `AddToPile` 在手牌满时也会把牌改投弃牌堆（和原版一致），但没有「下回合塞回手里」
+这一步。所以手牌满时打冥想，实机那张牌下个回合回到手上、预测里留在弃牌堆，**会静默算错**，
+表现是那一场反复重算。手牌不满时两边一致。
+
+**这一版没有修**：要正确镜像得给适配层加一份会随搜索分叉复制、并且进指纹的暂存名单
+（`ModelPredictionStateMirrors` / `PowerHiddenStateMirrors` 那条路）。记在 README 和创意工坊
+页面的已知缺口里。

@@ -62,11 +62,15 @@ Two of them:
 - **Draw Talisman** (a weak Ancient card the mod adds itself) and its bulk temporary enchantment.
   It **never silently miscalculates** — the solver marks the route in red with "unmirrored effect
   here".
-- **Fasting** and its one-less-energy-per-turn. This one **does silently miscalculate**: the
-  solver's power pass right after the turn-start energy reset is a hardcoded vanilla list with no
-  third-party registration point, so this mod cannot mirror it even though it knows what the power
-  does. It shows up as the route being recomputed every turn. A PR opening that registration point
-  is filed upstream; this mod will register there once it ships.
+- **Meditate played with a full hand**. The overflowing card really goes to the discard pile and
+  the mod puts it back into your hand at the start of the next turn; in prediction it stays in the
+  discard pile. With room in hand the two agree. This one **does silently miscalculate** (it shows
+  up as that fight recomputing over and over). Found while fixing Foresight in 1.0.6, not yet
+  fixed.
+
+**Fasting** was fixed in 1.0.4 (upstream turned that dispatch into a registry) and **Foresight** —
+which used to leave the game sitting on a card-selection screen at the start of every turn — in
+1.0.6.
 
 A further set of hooks that run through Harmony postfixes, or that the solver does not dispatch,
 is also not covered. These will be filled in over the coming releases.

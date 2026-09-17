@@ -301,3 +301,27 @@
       **harness 这一处也是求解器仓库的问题，待修。**
 - [x] 实机确认：加载日志那一行已变成「局外成长来源登记：已绑定」，游戏内无异常（2026-09-15）。
       这是本版唯一的运行时证据，它确认的是「入口绑上了」，不是「成长额度改变了路线」。
+
+## 1.0.6（2026-09-16）
+
+起因是玩家报「开着先见之明会卡死，只能自己手操」。根因是回合开始的预见没有镜像，实机弹出选牌
+页面而路线里没有这一步——不是算错，是停住，而且因为那个时点不记风险，连红字都没有。
+
+- [x] 新增 `src/WatcherHandDrawPatch.cs`：postfix 在 `TurnStartPowerSupport.TriggerBeforeHandDraw`
+      上，对玩家身上的 `ForesightPower` 走**回合开始的选牌通道**
+      （`TurnStartChoiceSupport.ResolvePileDiscard`），挂起选择时回写 `__result`。
+- [x] 预见挑牌之前的公共步骤抽成 `WatcherSimVerbs.PrepareScry`，出牌和回合开始两条通道共用。
+- [x] 夹具 33 → **34**（`WATCHER-FORESIGHT-TURN-START-SCRY`），正向通过；反向对照挂在
+      「首轮选牌分支仅评估 0 条」，恢复后重新通过。
+- [x] `AutoWatcher.json` / `AutoWatcher.csproj` 版本 `1.0.6`。**最低求解器版本不变**（`0.38.2`）。
+- [x] 求解器对标 `0.40.1`（工坊上的最新发布版；上游 `main` 另有 2 个未发版的性能提交，没有跟）。
+- [x] 已知缺口 1 → **2**：新发现「手牌满时打冥想，溢出的那张牌预测里留在弃牌堆」会静默算错，
+      本版没修，`README.md` / `README.en.md` / `publish/steam-description.md` 中英两份都写了。
+- [x] `publish/steam-description.md` 中英两份加 1.0.6 公告，`workshop.json` 重新生成，
+      `changeNote` 用 BBCode。
+- [x] `docs/VERIFICATION.md` 记下根因、修法和那处新缺口。
+- [x] 上传工作区 `ModUploader-win-x64/AutoWatcherWorkshop/` 换成 1.0.6 的 Release 构建。
+- [ ] 上传创意工坊 `3797303841`（要 Steam 客户端登录着）。
+- [ ] tag `v1.0.6` 与 GitHub release（`gh release create` 会被本地权限策略拦，作者自己跑）。
+- [ ] **全量 34 条没有重跑。** 这一版只动一个新补丁点和预见的公共前几步，其余夹具不沾边；
+      要保险可以补跑一轮。
