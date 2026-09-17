@@ -12,13 +12,13 @@ automate playing the Watcher. It changes no game behaviour and no numbers (the m
 
 | Dependency | Version | Where |
 |---|---|---|
-| Combat Solver | **0.32.0 or newer** | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) / [GitHub](https://github.com/Torch1230/CombatSolver) |
+| Combat Solver | **0.38.2 or newer** | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3790899961) / [GitHub](https://github.com/Torch1230/CombatSolver) |
 | Watcher (by Boninall) | 0.9.28 or newer | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747526116) |
 | RitsuLib | — | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) |
 
 **What happens on a version mismatch:**
 
-- Solver older than 0.32.0, or missing a registration point → AutoWatcher **refuses to load
+- Solver older than 0.38.2, or missing a registration point → AutoWatcher **refuses to load
   cleanly** and logs exactly what is missing and where to get the right build. The solver then
   stops at its own third-party check, as it would without this mod.
 - The Watcher updates → as long as its internals are unchanged, AutoWatcher keeps working; if
@@ -32,7 +32,7 @@ brought back in line. Hence two channels:
 
 | Channel | Targets | Where |
 |---|---|---|
-| **Steam Workshop** | *released* solver builds (0.32.0 and up) | [subscribe](https://steamcommunity.com/sharedfiles/filedetails/?id=3797303841) |
+| **Steam Workshop** | *released* solver builds (0.38.2 and up) | [subscribe](https://steamcommunity.com/sharedfiles/filedetails/?id=3797303841) |
 | **GitHub** | one specific solver version, possibly a development build | [Releases](https://github.com/bingyang1132/AutoWatcher/releases) |
 
 Torch's Slay the Spire 2 modding group (Chinese-language, QQ): 1106541324
@@ -81,15 +81,16 @@ Both full lists are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 **I installed this mod and the solver still stops at "incompatible third-party mod detected".**
 The adapter did not load. The lines starting with `[AutoWatcher]` in the log say why; the most
-common reason is a solver older than 0.32.0. The adapter is all-or-nothing: if its prerequisites
+common reason is a solver older than 0.38.2. The adapter is all-or-nothing: if its prerequisites
 do not hold it registers nothing at all rather than half of itself.
 
-**Why does the solver have to be 0.32.0 or newer?**
+**Why does the solver have to be 0.38.2 or newer?**
 The adapter registers the Watcher's effects into the solver's internal registries, and those
-registration points were added version by version. 0.32.0 is the first build whose **released
-binary** ships all five: third-party strategic evaluation, potion choices, card choices, pile
-discard choices, and playability coverage. The source of `0.31.3` has the first four, but its
-released binary does not include card choices.
+registration points were added version by version. `0.38.2` is the first released build with
+`AfterEnergyResetMirrors`, where Fasting and Deva Form are registered — below it the type does not
+even exist. (The previous floor was `0.32.0`: the first build whose **released binary** shipped all
+five of third-party strategic evaluation, potion choices, card choices, pile discard choices and
+playability coverage.)
 
 **Can I mix the Workshop build with the GitHub build?**
 Don't. Mixing will not fail silently — the structural check refuses to load when it does not line
@@ -111,7 +112,7 @@ That is fixed. The mirror was always right; what was broken was the solver's act
 classification — it only counted buffs on the player, so a Power sitting on the enemy that pays
 out to the player was invisible, and the card got treated as a weaker plain attack and sorted
 last. The fix adds a third-party strategic-evaluation registration point on the solver side.
-Needs solver 0.32.0 or newer.
+Needs solver 0.38.2 or newer.
 
 ## Reporting bugs
 
